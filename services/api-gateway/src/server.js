@@ -215,6 +215,46 @@ app.use(
   })
 );
 
+// Real-time tracking routes (NEW)
+app.use(
+  "/api/tracking",
+  authenticateToken,
+  createProxyMiddleware({
+    target: process.env.LOCATION_SERVICE_URL || "http://localhost:3001",
+    changeOrigin: true,
+    pathRewrite: {
+      "^/api/tracking": "/api/tracking",
+    },
+    onError: (err, req, res) => {
+      res.status(503).json({
+        error: "Service Unavailable",
+        message: "Real-time tracking service is currently unavailable",
+        service: "location-service",
+      });
+    },
+  })
+);
+
+// Geospatial routes (NEW)
+app.use(
+  "/api/geospatial",
+  authenticateToken,
+  createProxyMiddleware({
+    target: process.env.LOCATION_SERVICE_URL || "http://localhost:3001",
+    changeOrigin: true,
+    pathRewrite: {
+      "^/api/geospatial": "/api/geospatial",
+    },
+    onError: (err, req, res) => {
+      res.status(503).json({
+        error: "Service Unavailable",
+        message: "Geospatial service is currently unavailable",
+        service: "location-service",
+      });
+    },
+  })
+);
+
 app.use(
   "/api/services",
   authenticateToken,
