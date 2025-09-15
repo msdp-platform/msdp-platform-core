@@ -1,0 +1,21 @@
+{
+  "name": "@msdp/api-client",
+  "version": "1.0.0",
+  "description": "Multi-country API client for MSDP platform",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./country": "./src/country-api.js"
+  },
+  "scripts": {
+    "build": "echo 'API Client build complete'",
+    "test": "echo 'API Client tests'"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0"
+  }
+}
+

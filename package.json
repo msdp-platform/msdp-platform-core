@@ -1,0 +1,28 @@
+{
+  "name": "msdp-platform-core",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MSDP Platform Core Services and Shared Libraries",
+  "workspaces": [
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:api-gateway\" \"npm run dev:location-service\" \"npm run dev:merchant-service\"",
+    "dev:api-gateway": "cd services/api-gateway && npm run dev",
+    "dev:location-service": "cd services/location-service && npm run dev",
+    "dev:merchant-service": "cd services/merchant-service && npm run dev",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "db:setup": "chmod +x databases/init-core.sh && ./databases/init-core.sh"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
