@@ -1,0 +1,138 @@
+{
+  "countries": {
+    "usa": {
+      "name": "United States",
+      "code": "usa",
+      "flag": "🇺🇸",
+      "port": 4001,
+      "currency": "USD",
+      "language": "en-US",
+      "timezone": "America/New_York",
+      "theme": {
+        "primary": "#DC2626",
+        "secondary": "#1D4ED8",
+        "accent": "#FFFFFF",
+        "gradient": "from-red-600 via-white to-blue-600"
+      },
+      "compliance": ["CCPA", "SOX", "PCI DSS", "ADA"],
+      "features": {
+        "tipping": true,
+        "imperial_units": true,
+        "tax_display": "exclusive"
+      },
+      "payment_methods": [
+        "credit_card",
+        "debit_card",
+        "paypal",
+        "apple_pay",
+        "google_pay"
+      ],
+      "business_hours": "9:00 AM - 11:00 PM",
+      "app_name": "FoodieUSA"
+    },
+    "india": {
+      "name": "India",
+      "code": "india",
+      "flag": "🇮🇳",
+      "port": 4002,
+      "currency": "INR",
+      "language": "hi-IN",
+      "timezone": "Asia/Kolkata",
+      "theme": {
+        "primary": "#FF9933",
+        "secondary": "#138808",
+        "accent": "#FFFFFF",
+        "gradient": "from-orange-500 via-white to-green-600"
+      },
+      "compliance": ["DPDP Act", "IT Act 2000", "RBI Guidelines", "GST"],
+      "features": {
+        "vegetarian_filter": true,
+        "spice_levels": true,
+        "cash_on_delivery": true,
+        "festival_themes": true
+      },
+      "payment_methods": [
+        "upi",
+        "paytm",
+        "credit_card",
+        "debit_card",
+        "cash_on_delivery"
+      ],
+      "business_hours": "7:00 AM - 12:00 AM",
+      "app_name": "खाना Express"
+    },
+    "singapore": {
+      "name": "Singapore",
+      "code": "singapore",
+      "flag": "🇸🇬",
+      "port": 4003,
+      "currency": "SGD",
+      "language": "en-SG",
+      "timezone": "Asia/Singapore",
+      "theme": {
+        "primary": "#DC2626",
+        "secondary": "#FFFFFF",
+        "accent": "#DC2626",
+        "gradient": "from-red-600 via-white to-red-600"
+      },
+      "compliance": ["PDPA", "MAS Regulations", "SFA"],
+      "features": {
+        "halal_filter": true,
+        "hawker_centers": true,
+        "gst_included": true
+      },
+      "payment_methods": [
+        "credit_card",
+        "debit_card",
+        "grabpay",
+        "paynow",
+        "nets"
+      ],
+      "business_hours": "8:00 AM - 11:00 PM",
+      "app_name": "SG Eats"
+    },
+    "uk": {
+      "name": "United Kingdom",
+      "code": "uk",
+      "flag": "🇬🇧",
+      "port": 4004,
+      "currency": "GBP",
+      "language": "en-GB",
+      "timezone": "Europe/London",
+      "theme": {
+        "primary": "#1D4ED8",
+        "secondary": "#DC2626",
+        "accent": "#FFFFFF",
+        "gradient": "from-blue-700 via-white to-red-600"
+      },
+      "compliance": ["GDPR", "UK GDPR", "PCI DSS", "FCA Regulations"],
+      "features": {
+        "vat_included": true,
+        "pub_food": true,
+        "allergen_info": true,
+        "contactless_preferred": true
+      },
+      "payment_methods": [
+        "credit_card",
+        "debit_card",
+        "paypal",
+        "apple_pay",
+        "google_pay",
+        "klarna"
+      ],
+      "business_hours": "9:00 AM - 11:00 PM",
+      "app_name": "British Bites"
+    }
+  },
+  "global": {
+    "admin_port": 4000,
+    "api_gateway_port": 3000,
+    "merchant_port": 3006,
+    "admin_dashboard_port": 3002,
+    "base_service_ports": {
+      "location": 3001,
+      "merchant": 3003,
+      "delivery": 3004
+    }
+  }
+}
