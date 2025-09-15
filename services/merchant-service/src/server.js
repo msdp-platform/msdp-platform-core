@@ -8,8 +8,39 @@ require("dotenv").config();
 const authRoutes = require("./routes/auth");
 const menuRoutes = require("./routes/menu");
 
-// Multi-Country Configuration
-const countriesConfig = require("../../../config/countries.json");
+// Multi-Country Configuration - Inline for Docker compatibility
+const countriesConfig = {
+  countries: {
+    usa: {
+      name: "United States",
+      code: "usa",
+      flag: "🇺🇸",
+      port: 4001,
+      currency: "USD",
+    },
+    uk: {
+      name: "United Kingdom",
+      code: "uk",
+      flag: "🇬🇧",
+      port: 4004,
+      currency: "GBP",
+    },
+    india: {
+      name: "India",
+      code: "india",
+      flag: "🇮🇳",
+      port: 4002,
+      currency: "INR",
+    },
+    singapore: {
+      name: "Singapore",
+      code: "singapore",
+      flag: "🇸🇬",
+      port: 4003,
+      currency: "SGD",
+    },
+  },
+};
 
 const app = express();
 const PORT = process.env.PORT || 3003;
