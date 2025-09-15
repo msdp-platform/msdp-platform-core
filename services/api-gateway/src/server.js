@@ -66,7 +66,7 @@ app.get("/health", (req, res) => {
     multiCountry: true,
     countries: Object.keys(countriesConfig.countries),
     services: {
-      location: process.env.LOCATION_SERVICE_URL || "http://localhost:3001",
+      location: process.env.LOCATION_SERVICE_URL || "http://localhost:3011",
       merchant: process.env.MERCHANT_SERVICE_URL || "http://localhost:3003",
       delivery: process.env.DELIVERY_SERVICE_URL || "http://localhost:3004",
     },
@@ -152,7 +152,7 @@ Object.keys(countriesConfig.countries).forEach((countryCode) => {
       next();
     },
     createProxyMiddleware({
-      target: process.env.LOCATION_SERVICE_URL || "http://localhost:3001",
+      target: process.env.LOCATION_SERVICE_URL || "http://localhost:3011",
       changeOrigin: true,
       pathRewrite: {
         [`^/api/${countryCode}/locations`]: "/api/locations",
@@ -200,7 +200,7 @@ app.use(
   "/api/locations",
   authenticateToken,
   createProxyMiddleware({
-    target: process.env.LOCATION_SERVICE_URL || "http://localhost:3001",
+    target: process.env.LOCATION_SERVICE_URL || "http://localhost:3011",
     changeOrigin: true,
     pathRewrite: {
       "^/api/locations": "/api/locations",
@@ -220,7 +220,7 @@ app.use(
   "/api/tracking",
   authenticateToken,
   createProxyMiddleware({
-    target: process.env.LOCATION_SERVICE_URL || "http://localhost:3001",
+    target: process.env.LOCATION_SERVICE_URL || "http://localhost:3011",
     changeOrigin: true,
     pathRewrite: {
       "^/api/tracking": "/api/tracking",
@@ -240,7 +240,7 @@ app.use(
   "/api/geospatial",
   authenticateToken,
   createProxyMiddleware({
-    target: process.env.LOCATION_SERVICE_URL || "http://localhost:3001",
+    target: process.env.LOCATION_SERVICE_URL || "http://localhost:3011",
     changeOrigin: true,
     pathRewrite: {
       "^/api/geospatial": "/api/geospatial",
@@ -259,7 +259,7 @@ app.use(
   "/api/services",
   authenticateToken,
   createProxyMiddleware({
-    target: process.env.LOCATION_SERVICE_URL || "http://localhost:3001",
+    target: process.env.LOCATION_SERVICE_URL || "http://localhost:3011",
     changeOrigin: true,
     pathRewrite: {
       "^/api/services": "/api/services",
