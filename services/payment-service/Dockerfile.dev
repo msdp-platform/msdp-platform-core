@@ -1,0 +1,36 @@
+# Optimized Development Dockerfile for Payment Service
+FROM node:18-alpine
+
+# Install essential tools for development
+RUN apk add --no-cache curl dumb-init && \
+  addgroup -g 1001 -S nodejs && \
+  adduser -S paymentservice -u 1001 -G nodejs
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files first (better Docker layer caching)
+COPY package*.json ./
+
+# Install dependencies (optimized for development)
+RUN npm install && npm cache clean --force
+
+# Create logs directory
+RUN mkdir -p logs && chown -R paymentservice:nodejs /app
+
+# Copy source code
+COPY . .
+
+# Switch to non-root user
+USER paymentservice
+
+# Expose port (from centralized config)
+EXPOSE 3007
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD curl -f http://localhost:3007/health || exit 1
+
+# Use dumb-init for proper signal handling
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["npm", "run", "dev"]

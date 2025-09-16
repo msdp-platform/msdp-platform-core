@@ -49,7 +49,22 @@ pids/
 
 # Docker
 .dockerignore
+docker-compose.override.yml
+.docker/
+
+# Database data (local development)
+postgres-data/
+mysql-data/
+redis-data/
+
+# Docker volumes (if mounted locally)
+volumes/
 
 # Temporary files
 tmp/
 temp/
+
+# Service-specific ignores
+services/*/logs/
+services/*/.env.local
+services/*/coverage/

@@ -1,0 +1,98 @@
+services:
+  admin-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: msdp-admin-service-dev
+    ports:
+      - "3005:3005" # Using centralized port allocation
+    environment:
+      - NODE_ENV=development
+      - PORT=3005
+      # Database configuration (Admin Service owns admin data only)
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=msdp_admin
+      - DB_USER=msdp_user
+      - DB_PASSWORD=msdp_password
+      - DATABASE_URL=postgresql://msdp_user:msdp_password@postgres:5432/msdp_admin
+      # Service URLs (for orchestration)
+      - LOCATION_SERVICE_URL=http://host.docker.internal:3001
+      - MERCHANT_SERVICE_URL=http://host.docker.internal:3002
+      - API_GATEWAY_URL=http://host.docker.internal:3000
+      # Admin Service specific
+      - JWT_SECRET=dev-admin-jwt-secret
+      - JWT_EXPIRES_IN=24h
+      - CORS_ORIGIN=http://localhost:4000,http://localhost:3000
+      - LOG_LEVEL=debug
+    volumes:
+      # Source code hot reload (optimized)
+      - ./src:/app/src:cached
+      - ./package.json:/app/package.json:ro
+      # Logs directory
+      - ./logs:/app/logs:delegated
+      # Exclude node_modules from host (use named volume)
+      - admin_service_node_modules:/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - msdp-admin-network
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: msdp-admin-postgres-dev
+    environment:
+      - POSTGRES_DB=msdp_admin
+      - POSTGRES_USER=msdp_user
+      - POSTGRES_PASSWORD=msdp_password
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    ports:
+      - "5438:5432" # Using centralized port allocation
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-admin-schema.sql:ro
+      - ./database/permissions.sql:/docker-entrypoint-initdb.d/02-admin-permissions.sql:ro
+    networks:
+      - msdp-admin-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U msdp_user -d msdp_admin"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  pgadmin:
+    image: dpage/pgadmin4:8.13
+    container_name: msdp-admin-pgadmin-dev
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@msdp.com
+      - PGADMIN_DEFAULT_PASSWORD=admin123
+      - PGADMIN_LISTEN_PORT=80
+      - PGADMIN_CONFIG_SERVER_MODE=False
+      - PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED=False
+    ports:
+      - "8087:80" # Using centralized port allocation
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - msdp-admin-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    name: msdp_admin_postgres_data
+  pgadmin_data:
+    name: msdp_admin_pgadmin_data
+  admin_service_node_modules:
+    name: msdp_admin_service_node_modules
+
+networks:
+  msdp-admin-network:
+    driver: bridge
+    name: msdp-admin-network

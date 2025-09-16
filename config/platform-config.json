@@ -1,0 +1,136 @@
+{
+  "platform": {
+    "name": "MSDP",
+    "version": "2.0.0",
+    "environment": "development"
+  },
+  "ports": {
+    "services": {
+      "api-gateway": {
+        "service": 3000,
+        "redis": 6379,
+        "redis-commander": 8081
+      },
+      "location-service": {
+        "service": 3001,
+        "postgres": 5433,
+        "redis": 6380,
+        "pgadmin": 8080,
+        "redis-commander": 8082
+      },
+      "merchant-service": {
+        "service": 3002,
+        "postgres": 5434,
+        "pgadmin": 8083
+      },
+      "user-service": {
+        "service": 3003,
+        "postgres": 5435,
+        "pgadmin": 8084
+      },
+      "notification-service": {
+        "service": 3004,
+        "postgres": 5436,
+        "redis": 6381,
+        "pgadmin": 8085
+      },
+      "order-service": {
+        "service": 3006,
+        "postgres": 5437,
+        "pgadmin": 8088
+      },
+      "payment-service": {
+        "service": 3007,
+        "postgres": 5439,
+        "pgadmin": 8089
+      }
+    },
+    "frontends": {
+      "admin-dashboard": {
+        "service": 4000,
+        "postgres": 5440,
+        "pgadmin": 8086
+      },
+      "customer-app": {
+        "service": 4001
+      },
+      "merchant-webapp": {
+        "service": 4002
+      }
+    },
+    "countries": {
+      "usa": {
+        "customer-app": 5001
+      },
+      "india": {
+        "customer-app": 5002
+      },
+      "uk": {
+        "customer-app": 5003
+      },
+      "singapore": {
+        "customer-app": 5004
+      }
+    },
+    "infrastructure": {
+      "main-postgres": 5432,
+      "main-redis": 6379,
+      "elasticsearch": 9200,
+      "kibana": 5601,
+      "prometheus": 9090,
+      "grafana": 9091
+    },
+    "ranges": {
+      "backend-services": "3000-3099",
+      "frontend-apps": "4000-4099",
+      "country-specific": "5000-5099",
+      "databases": "5400-5499",
+      "cache": "6300-6399",
+      "monitoring": "8000-8099",
+      "infrastructure": "9000-9099"
+    }
+  },
+  "countries": {
+    "usa": {
+      "name": "United States",
+      "code": "usa",
+      "flag": "🇺🇸",
+      "currency": "USD",
+      "language": "en-US",
+      "timezone": "America/New_York",
+      "enabled": true
+    },
+    "uk": {
+      "name": "United Kingdom",
+      "code": "uk",
+      "flag": "🇬🇧",
+      "currency": "GBP",
+      "language": "en-GB",
+      "timezone": "Europe/London",
+      "enabled": true
+    },
+    "india": {
+      "name": "India",
+      "code": "india",
+      "flag": "🇮🇳",
+      "currency": "INR",
+      "language": "en-IN",
+      "timezone": "Asia/Kolkata",
+      "enabled": true
+    },
+    "singapore": {
+      "name": "Singapore",
+      "code": "singapore",
+      "flag": "🇸🇬",
+      "currency": "SGD",
+      "language": "en-SG",
+      "timezone": "Asia/Singapore",
+      "enabled": true
+    }
+  },
+  "service_discovery": {
+    "api-gateway": "http://localhost:3000",
+    "location-service": "http://localhost:3001",
+    "merchant-service": "http://localhost:3002"
+  }
+}

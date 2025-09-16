@@ -1,0 +1,93 @@
+services:
+  merchant-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: msdp-merchant-service-dev
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=development
+      - PORT=3002
+      # Database configuration (matching config/database.js)
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=msdp_merchant
+      - DB_USER=msdp_user
+      - DB_PASSWORD=msdp_password
+      # Legacy DATABASE_URL for compatibility
+      - DATABASE_URL=postgresql://msdp_user:msdp_password@postgres:5432/msdp_merchant
+      - JWT_SECRET=dev-merchant-jwt-secret
+      - JWT_EXPIRES_IN=24h
+      - API_GATEWAY_URL=http://host.docker.internal:3000
+      - CORS_ORIGIN=http://localhost:3000,http://localhost:4000,http://localhost:4002
+      - LOG_LEVEL=debug
+    volumes:
+      # Source code hot reload
+      - ./src:/app/src:cached
+      - ./package.json:/app/package.json:ro
+      # Exclude node_modules from host
+      - merchant_service_node_modules:/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - msdp-merchant-network
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: msdp-merchant-postgres-dev
+    environment:
+      - POSTGRES_DB=msdp_merchant
+      - POSTGRES_USER=msdp_user
+      - POSTGRES_PASSWORD=msdp_password
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ../../databases/merchant/schema.sql:/docker-entrypoint-initdb.d/02-merchant-schema.sql:ro
+    networks:
+      - msdp-merchant-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U msdp_user -d msdp_merchant"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  pgadmin:
+    image: dpage/pgadmin4:8.13
+    container_name: msdp-merchant-pgadmin-dev
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@msdp.com
+      - PGADMIN_DEFAULT_PASSWORD=admin123
+      - PGADMIN_LISTEN_PORT=80
+      - PGADMIN_CONFIG_SERVER_MODE=False
+      - PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED=False
+    ports:
+      - "8083:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - msdp-merchant-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    name: msdp_merchant_postgres_data
+  pgadmin_data:
+    name: msdp_merchant_pgadmin_data
+  merchant_service_node_modules:
+    name: msdp_merchant_service_node_modules
+
+networks:
+  msdp-merchant-network:
+    driver: bridge
+    name: msdp-merchant-network

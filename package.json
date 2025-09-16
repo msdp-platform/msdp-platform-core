@@ -8,10 +8,10 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:api-gateway\" \"npm run dev:location-service\" \"npm run dev:merchant-service\"",
+    "dev": "concurrently \"npm run dev:api-gateway\" \"npm run dev:merchant-service\"",
     "dev:api-gateway": "cd services/api-gateway && npm run dev",
-    "dev:location-service": "cd services/location-service && npm run dev",
     "dev:merchant-service": "cd services/merchant-service && npm run dev",
+    "dev:location-service": "echo 'Location service is now standalone - run from msdp-location-service repository'",
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
