@@ -52,10 +52,10 @@
         "pgadmin": 8086
       },
       "customer-app": {
-        "service": 4001
+        "service": 4002
       },
       "merchant-webapp": {
-        "service": 4002
+        "service": 4003
       }
     },
     "countries": {
