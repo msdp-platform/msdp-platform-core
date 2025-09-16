@@ -74,7 +74,8 @@ Admin Dashboard (4000)   Merchant Service (3002)  Loopback Gateway
 
 | Frontend | Port | Purpose | Framework | Status |
 |----------|------|---------|-----------|--------|
-| **Customer App** | 4002 | Shopping experience | Next.js 15 | ✅ Operational |
+| **Customer Web App** | 4002 | Shopping experience | Next.js 15 | ✅ Operational |
+| **Customer Mobile App** | 8090 | Mobile shopping | React Native/Expo | ✅ Ready |
 | **Admin Dashboard** | 4000 | Platform management | Next.js 15 | ✅ Operational |
 
 ### **Database Management**
@@ -128,7 +129,8 @@ node test-customer-shopping-flow.js
 ```
 
 ### **🌐 Access URLs**
-- **Customer App**: http://localhost:4002 🛒
+- **Customer Web App**: http://localhost:4002 🛒
+- **Customer Mobile App**: http://localhost:8090 📱 (Expo web)
 - **Admin Dashboard**: http://localhost:4000 👨‍💼
 - **API Health Checks**: 
   - User: http://localhost:3003/health

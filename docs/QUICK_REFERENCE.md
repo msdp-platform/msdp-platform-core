@@ -19,8 +19,11 @@ cd services/admin-service && ./dev-start.sh
 
 ### **Frontend Services**
 ```bash
-# Customer App
+# Customer Web App
 cd /Users/santanu/github/msdp-customer-frontends/apps/customer-app && ./dev-start.sh
+
+# Customer Mobile App
+cd /Users/santanu/github/msdp-customer-frontends/apps/customer-mobile && npx expo start
 
 # Admin Dashboard
 cd /Users/santanu/github/msdp-admin-frontends/apps/admin-dashboard && docker-compose -f docker-compose.dev.yml up -d
@@ -32,7 +35,8 @@ cd /Users/santanu/github/msdp-admin-frontends/apps/admin-dashboard && docker-com
 
 | Service | URL | Purpose |
 |---------|-----|---------|
-| **Customer App** | http://localhost:4002 | Shopping experience |
+| **Customer Web App** | http://localhost:4002 | Shopping experience |
+| **Customer Mobile App** | http://localhost:8090 | Mobile shopping (Expo web) |
 | **Admin Dashboard** | http://localhost:4000 | Platform management |
 | **User Service** | http://localhost:3003/health | User management API |
 | **Order Service** | http://localhost:3006/health | Order processing API |
