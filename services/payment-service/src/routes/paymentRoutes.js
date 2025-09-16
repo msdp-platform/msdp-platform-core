@@ -24,9 +24,7 @@ router.post("/process-internal", async (req, res, next) => {
       });
     }
 
-    console.log(
-      `💳 Processing internal payment for order ${orderId}`
-    );
+    console.log(`💳 Processing internal payment for order ${orderId}`);
 
     // Process payment through payment processor
     const paymentResult = await paymentProcessor.processPayment(

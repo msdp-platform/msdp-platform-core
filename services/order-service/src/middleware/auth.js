@@ -31,7 +31,9 @@ const authenticateUser = (req, res, next) => {
 
     // Ensure this is a customer token
     if (decoded.type !== "customer") {
-      logger.error(`❌ Invalid token type: ${decoded.type}, expected: customer`);
+      logger.error(
+        `❌ Invalid token type: ${decoded.type}, expected: customer`
+      );
       return res.status(403).json({
         error: "Invalid Token Type",
         message: "Customer authentication required",

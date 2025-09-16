@@ -1,4 +1,4 @@
-const pool = require('../config/database');
+const pool = require("../config/database");
 
 class Payment {
   static async create(paymentData) {
@@ -6,12 +6,12 @@ class Payment {
       order_id,
       user_id,
       amount,
-      currency = 'USD',
+      currency = "USD",
       payment_method,
       gateway_provider,
       gateway_transaction_id,
-      status = 'pending',
-      metadata = {}
+      status = "pending",
+      metadata = {},
     } = paymentData;
 
     const query = `
@@ -23,8 +23,15 @@ class Payment {
     `;
 
     const values = [
-      order_id, user_id, amount, currency, payment_method,
-      gateway_provider, gateway_transaction_id, status, JSON.stringify(metadata)
+      order_id,
+      user_id,
+      amount,
+      currency,
+      payment_method,
+      gateway_provider,
+      gateway_transaction_id,
+      status,
+      JSON.stringify(metadata),
     ];
 
     const result = await pool.query(query, values);
@@ -32,13 +39,14 @@ class Payment {
   }
 
   static async findById(id) {
-    const query = 'SELECT * FROM payments WHERE id = $1';
+    const query = "SELECT * FROM payments WHERE id = $1";
     const result = await pool.query(query, [id]);
     return result.rows[0];
   }
 
   static async findByOrderId(orderId) {
-    const query = 'SELECT * FROM payments WHERE order_id = $1 ORDER BY created_at DESC';
+    const query =
+      "SELECT * FROM payments WHERE order_id = $1 ORDER BY created_at DESC";
     const result = await pool.query(query, [orderId]);
     return result.rows;
   }
@@ -64,8 +72,12 @@ class Payment {
       WHERE id = $1
       RETURNING *
     `;
-    
-    const result = await pool.query(query, [id, status, JSON.stringify(gatewayData)]);
+
+    const result = await pool.query(query, [
+      id,
+      status,
+      JSON.stringify(gatewayData),
+    ]);
     return result.rows[0];
   }
 
@@ -76,12 +88,16 @@ class Payment {
       AND created_at < NOW() - INTERVAL '${olderThanMinutes} minutes'
       ORDER BY created_at ASC
     `;
-    
+
     const result = await pool.query(query);
     return result.rows;
   }
 
-  static async getPaymentStats(userId = null, startDate = null, endDate = null) {
+  static async getPaymentStats(
+    userId = null,
+    startDate = null,
+    endDate = null
+  ) {
     let query = `
       SELECT 
         status,
@@ -91,7 +107,7 @@ class Payment {
       FROM payments 
       WHERE 1=1
     `;
-    
+
     const values = [];
     let paramCount = 0;
 
@@ -113,24 +129,24 @@ class Payment {
       values.push(endDate);
     }
 
-    query += ' GROUP BY status ORDER BY status';
+    query += " GROUP BY status ORDER BY status";
 
     const result = await pool.query(query, values);
     return result.rows;
   }
 
-  static async refund(paymentId, amount = null, reason = '') {
+  static async refund(paymentId, amount = null, reason = "") {
     const payment = await this.findById(paymentId);
     if (!payment) {
-      throw new Error('Payment not found');
+      throw new Error("Payment not found");
     }
 
-    if (payment.status !== 'completed') {
-      throw new Error('Can only refund completed payments');
+    if (payment.status !== "completed") {
+      throw new Error("Can only refund completed payments");
     }
 
     const refundAmount = amount || payment.amount;
-    
+
     // Create refund record
     const refundQuery = `
       INSERT INTO payment_refunds (
@@ -138,12 +154,16 @@ class Payment {
       ) VALUES ($1, $2, $3, 'pending')
       RETURNING *
     `;
-    
-    const refundResult = await pool.query(refundQuery, [paymentId, refundAmount, reason]);
-    
+
+    const refundResult = await pool.query(refundQuery, [
+      paymentId,
+      refundAmount,
+      reason,
+    ]);
+
     // Update payment status if full refund
     if (refundAmount >= payment.amount) {
-      await this.updateStatus(paymentId, 'refunded');
+      await this.updateStatus(paymentId, "refunded");
     }
 
     return refundResult.rows[0];
@@ -157,18 +177,19 @@ class Payment {
       user_id: transactionData.userId,
       amount: transactionData.amount,
       currency: transactionData.currency,
-      payment_method: transactionData.details?.paymentMethod?.type || 'unknown',
-      gateway_provider: transactionData.details?.gateway || 'loopback',
-      gateway_transaction_id: transactionData.transactionId || `txn_${Date.now()}`,
+      payment_method: transactionData.details?.paymentMethod?.type || "unknown",
+      gateway_provider: transactionData.details?.gateway || "loopback",
+      gateway_transaction_id:
+        transactionData.transactionId || `txn_${Date.now()}`,
       status: transactionData.status,
-      metadata: transactionData.details || {}
+      metadata: transactionData.details || {},
     };
-    
+
     return this.create(paymentData);
   }
 
   static async getTransactionById(transactionId) {
-    const query = 'SELECT * FROM payments WHERE gateway_transaction_id = $1';
+    const query = "SELECT * FROM payments WHERE gateway_transaction_id = $1";
     const result = await pool.query(query, [transactionId]);
     return result.rows[0];
   }
