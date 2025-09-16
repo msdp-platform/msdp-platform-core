@@ -7,6 +7,7 @@ require("dotenv").config();
 
 const authRoutes = require("./routes/auth");
 const menuRoutes = require("./routes/menu");
+const orderRoutes = require("./routes/orders");
 
 // Multi-Country Configuration - Inline for Docker compatibility
 const countriesConfig = {
@@ -140,6 +141,7 @@ app.get("/api/merchants/country/:countryCode", (req, res) => {
 // API routes
 app.use("/api/auth", authRoutes);
 app.use("/api/menu", menuRoutes);
+app.use("/api/orders", orderRoutes);
 
 // 404 handler
 app.use("*", (req, res) => {
