@@ -1,282 +1,221 @@
-const pool = require("../config/database");
+const pool = require('../config/database');
 
 class Order {
-  // ✅ Create Order
-  static async createOrder(orderData, transaction = null) {
-    const client = transaction || pool;
+  static async create(orderData) {
+    const {
+      user_id,
+      items,
+      total_amount,
+      currency = 'USD',
+      shipping_address,
+      billing_address,
+      payment_method,
+      notes = '',
+      status = 'pending'
+    } = orderData;
 
-    try {
-      const {
-        userId,
-        merchantId,
-        cartId,
-        deliveryAddress,
-        customerName,
-        customerEmail,
-        merchantName,
-        countryCode,
-        currencyCode,
+    const query = `
+      INSERT INTO orders (
+        user_id, items, total_amount, currency, shipping_address,
+        billing_address, payment_method, notes, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING *
+    `;
+
+    const values = [
+      user_id, JSON.stringify(items), total_amount, currency,
+      JSON.stringify(shipping_address), JSON.stringify(billing_address),
+      payment_method, notes, status
+    ];
+
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  }
+
+  static async findById(id) {
+    const query = 'SELECT * FROM orders WHERE id = $1';
+    const result = await pool.query(query, [id]);
+    const order = result.rows[0];
+    
+    if (order) {
+      // Parse JSON fields
+      order.items = JSON.parse(order.items || '[]');
+      order.shipping_address = JSON.parse(order.shipping_address || '{}');
+      order.billing_address = JSON.parse(order.billing_address || '{}');
+    }
+    
+    return order;
+  }
+
+  static async findByUserId(userId, limit = 50, offset = 0) {
+    const query = `
+      SELECT * FROM orders 
+      WHERE user_id = $1 
+      ORDER BY created_at DESC 
+      LIMIT $2 OFFSET $3
+    `;
+    const result = await pool.query(query, [userId, limit, offset]);
+    
+    // Parse JSON fields for each order
+    return result.rows.map(order => ({
+      ...order,
+      items: JSON.parse(order.items || '[]'),
+      shipping_address: JSON.parse(order.shipping_address || '{}'),
+      billing_address: JSON.parse(order.billing_address || '{}')
+    }));
+  }
+
+  static async updateStatus(id, status, statusReason = null) {
+    const query = `
+      UPDATE orders 
+      SET status = $2, 
+          status_updated_at = NOW(),
+          updated_at = NOW(),
+          status_reason = $3
+      WHERE id = $1
+      RETURNING *
+    `;
+    
+    const result = await pool.query(query, [id, status, statusReason]);
+    const order = result.rows[0];
+    
+    if (order) {
+      order.items = JSON.parse(order.items || '[]');
+      order.shipping_address = JSON.parse(order.shipping_address || '{}');
+      order.billing_address = JSON.parse(order.billing_address || '{}');
+    }
+    
+    return order;
+  }
+
+  static async addTrackingInfo(id, trackingNumber, carrier) {
+    const query = `
+      UPDATE orders 
+      SET tracking_number = $2,
+          shipping_carrier = $3,
+          status = CASE WHEN status = 'confirmed' THEN 'shipped' ELSE status END,
+          updated_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `;
+    
+    const result = await pool.query(query, [id, trackingNumber, carrier]);
+    const order = result.rows[0];
+    
+    if (order) {
+      order.items = JSON.parse(order.items || '[]');
+      order.shipping_address = JSON.parse(order.shipping_address || '{}');
+      order.billing_address = JSON.parse(order.billing_address || '{}');
+    }
+    
+    return order;
+  }
+
+  static async findByStatus(status, limit = 100, offset = 0) {
+    const query = `
+      SELECT * FROM orders 
+      WHERE status = $1 
+      ORDER BY created_at DESC 
+      LIMIT $2 OFFSET $3
+    `;
+    const result = await pool.query(query, [status, limit, offset]);
+    
+    return result.rows.map(order => ({
+      ...order,
+      items: JSON.parse(order.items || '[]'),
+      shipping_address: JSON.parse(order.shipping_address || '{}'),
+      billing_address: JSON.parse(order.billing_address || '{}')
+    }));
+  }
+
+  static async getOrderStats(userId = null, startDate = null, endDate = null) {
+    let query = `
+      SELECT 
         status,
-        subtotal,
-        taxAmount,
-        deliveryFee,
-        discountAmount,
-        totalAmount,
-        notes,
-      } = orderData;
+        COUNT(*) as count,
+        SUM(total_amount) as total_revenue,
+        AVG(total_amount) as avg_order_value
+      FROM orders 
+      WHERE 1=1
+    `;
+    
+    const values = [];
+    let paramCount = 0;
 
-      const result = await client.query(
-        `INSERT INTO orders (
-          user_id, merchant_id, cart_id, delivery_address, customer_name, customer_email, 
-          merchant_name, country_code, currency_code, status, subtotal, tax_amount, 
-          delivery_fee, discount_amount, total_amount, notes
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) 
-        RETURNING *`,
-        [
-          userId,
-          merchantId,
-          cartId,
-          JSON.stringify(deliveryAddress),
-          customerName,
-          customerEmail,
-          merchantName,
-          countryCode,
-          currencyCode,
-          status,
-          subtotal,
-          taxAmount,
-          deliveryFee,
-          discountAmount,
-          totalAmount,
-          notes,
-        ]
-      );
-
-      return result.rows[0];
-    } catch (error) {
-      console.error("Error creating order:", error);
-      throw error;
+    if (userId) {
+      paramCount++;
+      query += ` AND user_id = $${paramCount}`;
+      values.push(userId);
     }
+
+    if (startDate) {
+      paramCount++;
+      query += ` AND created_at >= $${paramCount}`;
+      values.push(startDate);
+    }
+
+    if (endDate) {
+      paramCount++;
+      query += ` AND created_at <= $${paramCount}`;
+      values.push(endDate);
+    }
+
+    query += ' GROUP BY status ORDER BY status';
+
+    const result = await pool.query(query, values);
+    return result.rows;
   }
 
-  // ✅ Add Order Items
-  static async addOrderItems(orderId, items, transaction = null) {
-    const client = transaction || pool;
-
-    try {
-      const queries = items.map((item) => {
-        return client.query(
-          `INSERT INTO order_items (order_id, menu_item_id, item_name, quantity, unit_price, total_price, special_instructions, customizations)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-          [
-            orderId,
-            item.menuItemId,
-            item.itemName,
-            item.quantity,
-            item.unitPrice,
-            item.totalPrice,
-            item.specialInstructions,
-            JSON.stringify(item.customizations || {}),
-          ]
-        );
-      });
-
-      const results = await Promise.all(queries);
-      return results.map((result) => result.rows[0]);
-    } catch (error) {
-      console.error("Error adding order items:", error);
-      throw error;
+  static async cancel(id, reason = 'Customer requested') {
+    const order = await this.findById(id);
+    if (!order) {
+      throw new Error('Order not found');
     }
+
+    if (!['pending', 'confirmed'].includes(order.status)) {
+      throw new Error(`Cannot cancel order with status: ${order.status}`);
+    }
+
+    return await this.updateStatus(id, 'cancelled', reason);
   }
 
-  // ✅ Get Order by ID
-  static async getOrderById(orderId) {
-    try {
-      const result = await pool.query("SELECT * FROM orders WHERE id = $1", [
-        orderId,
-      ]);
-
-      return result.rows[0];
-    } catch (error) {
-      console.error("Error fetching order:", error);
-      throw error;
-    }
+  static async getRecentOrders(limit = 10) {
+    const query = `
+      SELECT * FROM orders 
+      ORDER BY created_at DESC 
+      LIMIT $1
+    `;
+    const result = await pool.query(query, [limit]);
+    
+    return result.rows.map(order => ({
+      ...order,
+      items: JSON.parse(order.items || '[]'),
+      shipping_address: JSON.parse(order.shipping_address || '{}'),
+      billing_address: JSON.parse(order.billing_address || '{}')
+    }));
   }
 
-  // ✅ Get Order Items
-  static async getOrderItems(orderId) {
-    try {
-      const result = await pool.query(
-        "SELECT * FROM order_items WHERE order_id = $1 ORDER BY added_at ASC",
-        [orderId]
-      );
-
-      return result.rows;
-    } catch (error) {
-      console.error("Error fetching order items:", error);
-      throw error;
-    }
-  }
-
-  // ✅ Get Order Tracking
-  static async getOrderTracking(orderId) {
-    try {
-      const result = await pool.query(
-        "SELECT * FROM order_tracking WHERE order_id = $1 ORDER BY timestamp DESC",
-        [orderId]
-      );
-
-      return result.rows;
-    } catch (error) {
-      console.error("Error fetching order tracking:", error);
-      throw error;
-    }
-  }
-
-  // ✅ Get User Orders
-  static async getUserOrders(userId, options = {}) {
-    try {
-      const { page = 1, limit = 10, status } = options;
-      const offset = (page - 1) * limit;
-
-      let query = "SELECT * FROM orders WHERE user_id = $1";
-      let params = [userId];
-      let paramIndex = 2;
-
-      if (status) {
-        query += ` AND status = $${paramIndex}`;
-        params.push(status);
-        paramIndex++;
-      }
-
-      query += ` ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-      params.push(limit, offset);
-
-      const result = await pool.query(query, params);
-
-      // Get total count for pagination
-      let countQuery = "SELECT COUNT(*) FROM orders WHERE user_id = $1";
-      let countParams = [userId];
-
-      if (status) {
-        countQuery += " AND status = $2";
-        countParams.push(status);
-      }
-
-      const countResult = await pool.query(countQuery, countParams);
-      const totalCount = parseInt(countResult.rows[0].count);
-
-      return {
-        orders: result.rows,
-        pagination: {
-          page,
-          limit,
-          totalCount,
-          totalPages: Math.ceil(totalCount / limit),
-        },
-      };
-    } catch (error) {
-      console.error("Error fetching user orders:", error);
-      throw error;
-    }
-  }
-
-  // ✅ Update Order Status
-  static async updateOrderStatus(
-    orderId,
-    status,
-    notes = null,
-    transaction = null
-  ) {
-    const client = transaction || pool;
-
-    try {
-      const result = await client.query(
-        "UPDATE orders SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *",
-        [status, orderId]
-      );
-
-      // Add to status history
-      if (result.rows[0]) {
-        await client.query(
-          "INSERT INTO order_status_history (order_id, status, changed_by, timestamp) VALUES ($1, $2, $3, CURRENT_TIMESTAMP)",
-          [orderId, status, "system"]
-        );
-      }
-
-      return result.rows[0];
-    } catch (error) {
-      console.error("Error updating order status:", error);
-      throw error;
-    }
-  }
-
-  // ✅ Update Order Payment
-  static async updateOrderPayment(orderId, paymentData, transaction = null) {
-    const client = transaction || pool;
-
-    try {
-      const { paymentId, paymentStatus, refundId } = paymentData;
-
-      const result = await client.query(
-        `UPDATE orders SET 
-         payment_id = COALESCE($1, payment_id), 
-         payment_status = COALESCE($2, payment_status),
-         updated_at = CURRENT_TIMESTAMP 
-         WHERE id = $3 RETURNING *`,
-        [paymentId, paymentStatus, orderId]
-      );
-
-      return result.rows[0];
-    } catch (error) {
-      console.error("Error updating order payment:", error);
-      throw error;
-    }
-  }
-
-  // ✅ Add Order Tracking
-  static async addOrderTracking(
-    orderId,
-    status,
-    notes = null,
-    location = null
-  ) {
-    try {
-      const result = await pool.query(
-        "INSERT INTO order_tracking (order_id, status, location, notes) VALUES ($1, $2, $3, $4) RETURNING *",
-        [orderId, status, JSON.stringify(location), notes]
-      );
-
-      return result.rows[0];
-    } catch (error) {
-      console.error("Error adding order tracking:", error);
-      throw error;
-    }
-  }
-
-  // ✅ Begin Transaction (for database transactions)
-  static async beginTransaction() {
-    const client = await pool.connect();
-    await client.query("BEGIN");
-
-    // Add commit and rollback methods to the client
-    client.commit = async () => {
-      try {
-        await client.query("COMMIT");
-      } finally {
-        client.release();
-      }
-    };
-
-    client.rollback = async () => {
-      try {
-        await client.query("ROLLBACK");
-      } finally {
-        client.release();
-      }
-    };
-
-    return client;
+  static async searchOrders(searchTerm, limit = 50, offset = 0) {
+    const query = `
+      SELECT * FROM orders 
+      WHERE 
+        id::text ILIKE $1 OR
+        tracking_number ILIKE $1 OR
+        notes ILIKE $1 OR
+        items::text ILIKE $1
+      ORDER BY created_at DESC 
+      LIMIT $2 OFFSET $3
+    `;
+    
+    const searchPattern = `%${searchTerm}%`;
+    const result = await pool.query(query, [searchPattern, limit, offset]);
+    
+    return result.rows.map(order => ({
+      ...order,
+      items: JSON.parse(order.items || '[]'),
+      shipping_address: JSON.parse(order.shipping_address || '{}'),
+      billing_address: JSON.parse(order.billing_address || '{}')
+    }));
   }
 }
 
