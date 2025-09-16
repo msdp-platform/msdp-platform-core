@@ -27,8 +27,11 @@ const authenticateUser = (req, res, next) => {
       process.env.JWT_SECRET || "user-service-secret" // Same secret as User Service
     );
 
+    logger.info(`🔍 Token decoded:`, JSON.stringify(decoded, null, 2));
+
     // Ensure this is a customer token
     if (decoded.type !== "customer") {
+      logger.error(`❌ Invalid token type: ${decoded.type}, expected: customer`);
       return res.status(403).json({
         error: "Invalid Token Type",
         message: "Customer authentication required",

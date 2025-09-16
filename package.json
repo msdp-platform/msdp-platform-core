@@ -18,6 +18,7 @@
     "db:setup": "chmod +x databases/init-core.sh && ./databases/init-core.sh"
   },
   "devDependencies": {
+    "axios": "^1.12.2",
     "concurrently": "^8.2.2",
     "typescript": "^5.0.0"
   },

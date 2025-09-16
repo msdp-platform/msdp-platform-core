@@ -26,7 +26,7 @@ services:
       - PAYPAL_CLIENT_ID=demo_paypal_client_id
       - PAYPAL_CLIENT_SECRET=demo_paypal_secret
       # Authentication
-      - JWT_SECRET=dev-payment-jwt-secret
+      - JWT_SECRET=dev-user-jwt-secret
       - JWT_EXPIRES_IN=7d
       # CORS
       - CORS_ORIGIN=http://localhost:4001,http://localhost:5001,http://localhost:5002,http://localhost:5003,http://localhost:5004,http://localhost:3006

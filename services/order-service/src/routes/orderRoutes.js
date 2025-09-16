@@ -36,14 +36,14 @@ router.post("/create", async (req, res, next) => {
     }
 
     console.log(
-      `🛒 Creating order for user ${req.user.id} with ${cartData.items.length} items`
+      `🛒 Creating order for user ${req.user.userId} with ${cartData.items.length} items`
     );
 
     // Create order with payment coordination
     const result = await orderPaymentCoordinator.createOrderWithPayment(
       cartData,
       paymentMethod,
-      req.user.id
+      req.user.userId
     );
 
     if (result.success) {
@@ -73,7 +73,7 @@ router.get("/user/:userId", async (req, res, next) => {
     const { page = 1, limit = 10, status } = req.query;
 
     // Ensure user can only access their own orders
-    if (userId !== req.user.id) {
+    if (userId !== req.user.userId) {
       return res.status(403).json({
         error: "Access denied",
         message: "You can only access your own orders",
@@ -119,7 +119,7 @@ router.get("/:orderId", async (req, res, next) => {
     }
 
     // Ensure user can only access their own orders
-    if (order.user_id !== req.user.id) {
+    if (order.user_id !== req.user.userId) {
       return res.status(403).json({
         error: "Access denied",
         message: "You can only access your own orders",
@@ -208,7 +208,7 @@ router.post("/:orderId/cancel", async (req, res, next) => {
     }
 
     // Ensure user can only cancel their own orders
-    if (order.user_id !== req.user.id) {
+    if (order.user_id !== req.user.userId) {
       return res.status(403).json({
         error: "Access denied",
         message: "You can only cancel your own orders",
@@ -224,7 +224,7 @@ router.post("/:orderId/cancel", async (req, res, next) => {
       });
     }
 
-    console.log(`❌ Cancelling order ${orderId} for user ${req.user.id}`);
+    console.log(`❌ Cancelling order ${orderId} for user ${req.user.userId}`);
 
     // Update order status to cancelled
     await Order.updateOrderStatus(orderId, "cancelled");

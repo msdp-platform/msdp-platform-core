@@ -148,6 +148,30 @@ class Payment {
 
     return refundResult.rows[0];
   }
+
+  // Alternative method names for PaymentProcessor compatibility
+  static async createTransaction(transactionData) {
+    // Map transaction data to payment data format
+    const paymentData = {
+      order_id: transactionData.orderId,
+      user_id: transactionData.userId,
+      amount: transactionData.amount,
+      currency: transactionData.currency,
+      payment_method: transactionData.details?.paymentMethod?.type || 'unknown',
+      gateway_provider: transactionData.details?.gateway || 'loopback',
+      gateway_transaction_id: transactionData.transactionId || `txn_${Date.now()}`,
+      status: transactionData.status,
+      metadata: transactionData.details || {}
+    };
+    
+    return this.create(paymentData);
+  }
+
+  static async getTransactionById(transactionId) {
+    const query = 'SELECT * FROM payments WHERE gateway_transaction_id = $1';
+    const result = await pool.query(query, [transactionId]);
+    return result.rows[0];
+  }
 }
 
 module.exports = Payment;

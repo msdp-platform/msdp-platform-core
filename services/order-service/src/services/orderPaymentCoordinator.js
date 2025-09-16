@@ -69,7 +69,7 @@ class OrderPaymentCoordinator {
         );
 
         // 5. Commit transaction
-        await transaction.commit();
+        await Order.commitTransaction(transaction);
 
         console.log(
           `✅ Order ${order.id} confirmed with payment ${paymentResult.payment.transactionId}`
@@ -91,7 +91,7 @@ class OrderPaymentCoordinator {
         };
       } else {
         // 5. Payment failed - rollback transaction
-        await transaction.rollback();
+        await Order.rollbackTransaction(transaction);
 
         console.log(
           `❌ Payment failed for order ${order.id}: ${paymentResult.error?.message}`
@@ -109,7 +109,7 @@ class OrderPaymentCoordinator {
       }
     } catch (error) {
       // Rollback transaction on any error
-      await transaction.rollback();
+      await Order.rollbackTransaction(transaction);
 
       console.error(`💥 Order creation failed:`, error);
 
@@ -143,16 +143,15 @@ class OrderPaymentCoordinator {
       };
 
       console.log(
-        `🔗 Calling Payment Service: ${this.paymentServiceUrl}/api/payments/process`
+        `🔗 Calling Payment Service: ${this.paymentServiceUrl}/api/payments/process-internal`
       );
 
       const response = await axios.post(
-        `${this.paymentServiceUrl}/api/payments/process`,
+        `${this.paymentServiceUrl}/api/payments/process-internal`,
         paymentRequest,
         {
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${this.generateServiceToken(userId)}`,
           },
           timeout: 30000, // 30 second timeout
         }

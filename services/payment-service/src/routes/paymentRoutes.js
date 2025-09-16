@@ -6,6 +6,61 @@ const PaymentProcessor = require("../services/paymentProcessor");
 const router = express.Router();
 const paymentProcessor = new PaymentProcessor();
 
+// ✅ Service-to-Service Payment Processing (for Order Service)
+router.post("/process-internal", async (req, res, next) => {
+  try {
+    const { orderId, paymentMethod, orderData } = req.body;
+
+    // Validate required fields
+    if (!orderId || !paymentMethod || !orderData) {
+      return res.status(400).json({
+        error: "Missing required fields",
+        required: ["orderId", "paymentMethod", "orderData"],
+        received: {
+          orderId: !!orderId,
+          paymentMethod: !!paymentMethod,
+          orderData: !!orderData,
+        },
+      });
+    }
+
+    console.log(
+      `💳 Processing internal payment for order ${orderId}`
+    );
+
+    // Process payment through payment processor
+    const paymentResult = await paymentProcessor.processPayment(
+      orderData,
+      paymentMethod
+    );
+
+    if (paymentResult.success) {
+      res.status(200).json({
+        success: true,
+        payment: {
+          transactionId: paymentResult.transactionId,
+          amount: paymentResult.amount,
+          currency: paymentResult.currency,
+          status: paymentResult.status,
+          gateway_provider: paymentResult.gateway_provider,
+          gateway_transaction_id: paymentResult.gateway_transaction_id,
+          processed_at: paymentResult.processed_at,
+        },
+        message: "Payment processed successfully",
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: paymentResult.error,
+        message: "Payment processing failed",
+      });
+    }
+  } catch (error) {
+    console.error("💥 Internal payment processing error:", error);
+    next(error);
+  }
+});
+
 // ✅ Process Payment (Essential for customer experience)
 router.post("/process", authenticateUser, async (req, res, next) => {
   try {

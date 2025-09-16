@@ -167,6 +167,36 @@ CREATE INDEX idx_discount_applications_order ON discount_applications(order_id);
 CREATE INDEX idx_discount_applications_user ON discount_applications(user_id);
 CREATE INDEX idx_discount_applications_code ON discount_applications(discount_code);
 
+-- ✅ Payments (Simplified table for Payment model compatibility)
+CREATE TABLE payments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    order_id UUID NOT NULL, -- Reference to Order Service
+    user_id UUID NOT NULL, -- Reference to User Service
+    amount DECIMAL(10,2) NOT NULL,
+    currency VARCHAR(3) DEFAULT 'USD',
+    payment_method VARCHAR(50) NOT NULL,
+    gateway_provider VARCHAR(50) DEFAULT 'loopback',
+    gateway_transaction_id VARCHAR(255),
+    status VARCHAR(20) DEFAULT 'pending', -- pending, completed, failed, refunded
+    gateway_response JSONB DEFAULT '{}',
+    metadata JSONB DEFAULT '{}',
+    processed_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ✅ Payment Refunds (For refund tracking)
+CREATE TABLE payment_refunds (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    payment_id UUID NOT NULL REFERENCES payments(id) ON DELETE CASCADE,
+    amount DECIMAL(10,2) NOT NULL,
+    reason TEXT,
+    status VARCHAR(20) DEFAULT 'pending', -- pending, completed, failed
+    gateway_refund_id VARCHAR(255),
+    processed_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- ✅ Insert sample payment methods for testing
 INSERT INTO payment_methods (user_id, method_type, provider, card_last_four, card_brand, 
                             is_default, country_code, currency_code) VALUES 
