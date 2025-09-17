@@ -138,7 +138,7 @@ app.get("/api/merchants/country/:countryCode", (req, res) => {
   });
 });
 
-// API routes
+// API routes - VendaBuddy endpoints
 app.use("/api/auth", authRoutes);
 app.use("/api/menu", menuRoutes);
 app.use("/api/orders", orderRoutes);

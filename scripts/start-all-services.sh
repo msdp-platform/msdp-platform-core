@@ -42,7 +42,7 @@ echo ""
 echo "🔧 Starting Backend Services..."
 echo "================================"
 
-start_service "api-gateway" "/Users/santanu/github/msdp-platform-core/api-gateway" "http://localhost:3000/health" "API Gateway"
+start_service "api-gateway" "/Users/santanu/github/msdp-platform-core/services/api-gateway" "http://localhost:3000/health" "API Gateway"
 start_service "location-service" "/Users/santanu/github/msdp-location-service" "http://localhost:3001/health" "Location Service"
 start_service "merchant-service" "/Users/santanu/github/msdp-platform-core/services/merchant-service" "http://localhost:3002/health" "Merchant Service"
 start_service "user-service" "/Users/santanu/github/msdp-platform-core/services/user-service" "http://localhost:3003/health" "User Service"

@@ -4,7 +4,7 @@ CREATE DATABASE msdp_merchant;
 -- Use the database
 \c msdp_merchant;
 
--- Create merchants table
+-- Create merchants table (VendaBuddy Service Providers)
 CREATE TABLE merchants (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -12,10 +12,17 @@ CREATE TABLE merchants (
     password_hash VARCHAR(255) NOT NULL,
     phone VARCHAR(20),
     address TEXT,
-    business_type VARCHAR(50) DEFAULT 'restaurant',
+    business_type VARCHAR(50) DEFAULT 'food_service',
     description TEXT,
     logo_url VARCHAR(500),
+    country VARCHAR(3) DEFAULT 'GB',
+    currency VARCHAR(3) DEFAULT 'GBP',
     status VARCHAR(20) DEFAULT 'active',
+    onboarded_by VARCHAR(50) DEFAULT 'admin',
+    total_jobs INTEGER DEFAULT 0,
+    total_earnings DECIMAL(12,2) DEFAULT 0.00,
+    average_rating DECIMAL(3,2) DEFAULT 0.00,
+    total_reviews INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

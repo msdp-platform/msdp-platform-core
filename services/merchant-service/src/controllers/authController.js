@@ -15,9 +15,20 @@ const registerSchema = Joi.object({
   phone: Joi.string().pattern(/^[+]?[1-9][\d\s\-()]{7,15}$/),
   address: Joi.string().max(500),
   business_type: Joi.string()
-    .valid("restaurant", "cafe", "bakery", "food_truck", "catering")
-    .default("restaurant"),
+    .valid(
+      // VendaBuddy Service Categories
+      "food_service",        // Restaurants, street food, catering
+      "home_service",        // Cleaning, repairs, maintenance
+      "digital_service",     // Design, development, marketing
+      "professional_service", // Consulting, training, coaching
+      "logistics",           // Transport, delivery, moving
+      "creative_service",    // Photography, events, content
+      // Legacy support
+      "restaurant", "cafe", "bakery", "food_truck", "catering"
+    )
+    .default("food_service"),
   description: Joi.string().max(1000),
+  country: Joi.string().valid("GB", "IN", "US", "SG").default("GB"),
 });
 
 // Generate JWT token
