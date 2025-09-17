@@ -17,14 +17,18 @@ const registerSchema = Joi.object({
   business_type: Joi.string()
     .valid(
       // VendaBuddy Service Categories
-      "food_service",        // Restaurants, street food, catering
-      "home_service",        // Cleaning, repairs, maintenance
-      "digital_service",     // Design, development, marketing
+      "food_service", // Restaurants, street food, catering
+      "home_service", // Cleaning, repairs, maintenance
+      "digital_service", // Design, development, marketing
       "professional_service", // Consulting, training, coaching
-      "logistics",           // Transport, delivery, moving
-      "creative_service",    // Photography, events, content
+      "logistics", // Transport, delivery, moving
+      "creative_service", // Photography, events, content
       // Legacy support
-      "restaurant", "cafe", "bakery", "food_truck", "catering"
+      "restaurant",
+      "cafe",
+      "bakery",
+      "food_truck",
+      "catering"
     )
     .default("food_service"),
   description: Joi.string().max(1000),
