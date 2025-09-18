@@ -1,0 +1,169 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: enable-location
+  title: Enable New Location
+  description: Enable MSDP services in a new country/city for global expansion
+  tags:
+    - msdp
+    - location
+    - admin
+    - global
+spec:
+  owner: platform-team
+  type: location
+  
+  parameters:
+    - title: Location Information
+      required:
+        - country
+        - city
+        - currency
+      properties:
+        country:
+          title: Country Code
+          type: string
+          description: ISO country code (e.g., SG, AU, CA, DE)
+          pattern: '^[A-Z]{2}$'
+          ui:placeholder: 'SG'
+        city:
+          title: City Name
+          type: string
+          description: Primary city name for this location
+          ui:placeholder: 'Singapore'
+        currency:
+          title: Currency Code
+          type: string
+          description: Local currency code (e.g., SGD, AUD, CAD, EUR)
+          pattern: '^[A-Z]{3}$'
+          ui:placeholder: 'SGD'
+        
+    - title: Service Configuration
+      properties:
+        enableFood:
+          title: Enable Food Services
+          type: boolean
+          description: Allow food delivery and restaurant services
+          default: true
+        enableHome:
+          title: Enable Home Services
+          type: boolean
+          description: Allow cleaning, maintenance, and home services
+          default: true
+        enableDigital:
+          title: Enable Digital Services
+          type: boolean
+          description: Allow digital and professional services
+          default: true
+        enableLogistics:
+          title: Enable Logistics Services
+          type: boolean
+          description: Allow delivery and logistics services
+          default: false
+        maxProviders:
+          title: Maximum Service Providers
+          type: number
+          description: Maximum number of service providers allowed
+          default: 1000
+
+    - title: Compliance Settings
+      properties:
+        taxRate:
+          title: Local Tax Rate (%)
+          type: number
+          description: Local tax rate percentage
+          default: 0
+        requiresLicense:
+          title: Business License Required
+          type: boolean
+          description: Whether businesses need local licenses
+          default: true
+
+  steps:
+    - id: create-location-config
+      name: Create Location Configuration
+      action: fs:write
+      input:
+        path: location-config.json
+        content: |
+          {
+            "country": "${{ parameters.country }}",
+            "city": "${{ parameters.city }}",
+            "currency": "${{ parameters.currency }}",
+            "services": {
+              "food": ${{ parameters.enableFood }},
+              "home": ${{ parameters.enableHome }},
+              "digital": ${{ parameters.enableDigital }},
+              "logistics": ${{ parameters.enableLogistics }}
+            },
+            "limits": {
+              "maxProviders": ${{ parameters.maxProviders }}
+            },
+            "compliance": {
+              "taxRate": ${{ parameters.taxRate }},
+              "requiresLicense": ${{ parameters.requiresLicense }}
+            },
+            "status": "enabled",
+            "enabledAt": "${{ "now" | date("iso") }}",
+            "enabledBy": "backstage-admin"
+          }
+
+    - id: log-location
+      name: Log Location Creation
+      action: debug:log
+      input:
+        message: |
+          🌍 Enabling new location: ${{ parameters.city }}, ${{ parameters.country }}
+          💰 Currency: ${{ parameters.currency }}
+          🏪 Max Providers: ${{ parameters.maxProviders }}
+          📋 Services: Food=${{ parameters.enableFood }}, Home=${{ parameters.enableHome }}, Digital=${{ parameters.enableDigital }}
+
+    - id: register-location
+      name: Register Location in Catalog
+      action: catalog:write
+      input:
+        entity:
+          apiVersion: backstage.io/v1alpha1
+          kind: Resource
+          metadata:
+            name: ${{ parameters.country | lower }}-${{ parameters.city | lower | replace(" ", "-") }}
+            description: MSDP location in ${{ parameters.city }}, ${{ parameters.country }}
+            tags:
+              - location
+              - ${{ parameters.country | lower }}
+              - enabled
+          spec:
+            type: location
+            lifecycle: production
+            owner: platform-team
+            system: msdp-platform
+
+  output:
+    text:
+      - title: Location Successfully Enabled
+        content: |
+          🎉 **Location Enabled Successfully!**
+          
+          **📍 Location Details:**
+          - **Country**: ${{ parameters.country }}
+          - **City**: ${{ parameters.city }}
+          - **Currency**: ${{ parameters.currency }}
+          
+          **🏪 Services Enabled:**
+          - **Food Services**: ${{ parameters.enableFood }}
+          - **Home Services**: ${{ parameters.enableHome }}
+          - **Digital Services**: ${{ parameters.enableDigital }}
+          - **Logistics**: ${{ parameters.enableLogistics }}
+          
+          **📊 Configuration:**
+          - **Max Providers**: ${{ parameters.maxProviders }}
+          - **Tax Rate**: ${{ parameters.taxRate }}%
+          - **License Required**: ${{ parameters.requiresLicense }}
+          
+          **🚀 Next Steps:**
+          1. Location will appear in Customer App
+          2. VendaBuddy signup will show this location
+          3. Businesses can now onboard in this location
+          4. Monitor location performance in Backstage
+          
+          **✅ Location is now live and ready for business onboarding!**

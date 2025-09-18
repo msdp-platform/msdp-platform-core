@@ -1,0 +1,98 @@
+app:
+  title: MSDP Service Catalog
+  baseUrl: http://192.168.1.102:3000
+  listen:
+    host: 0.0.0.0
+    port: 3000
+
+organization:
+  name: MSDP Platform
+
+backend:
+  baseUrl: http://192.168.1.102:7007
+  listen:
+    host: 0.0.0.0
+    port: 7007
+  
+  cors:
+    origin: 
+      - http://192.168.1.102:3000
+      - http://192.168.1.189:*  # Your laptop IP
+      - http://localhost:*
+    credentials: true
+
+  database:
+    client: better-sqlite3
+    connection: ':memory:'
+
+auth:
+  environment: development
+  providers:
+    guest: {}
+    # GitHub OAuth (uncomment when ready)
+    # github:
+    #   development:
+    #     clientId: ${GITHUB_CLIENT_ID}
+    #     clientSecret: ${GITHUB_CLIENT_SECRET}
+
+catalog:
+  rules:
+    - allow: [Component, System, API, Resource, Location, User, Group, Template]
+  
+  locations:
+    - type: file
+      target: ./catalog/msdp-services.yaml
+    - type: file
+      target: ./catalog/msdp-teams.yaml
+    - type: file
+      target: ./templates/enable-location.yaml
+    - type: file
+      target: ./templates/onboard-business.yaml
+    - type: file
+      target: ./templates/create-service.yaml
+
+# API Proxies for MSDP Services (Your laptop: 192.168.1.189)
+proxy:
+  '/api/msdp':
+    target: http://192.168.1.189:3000
+    changeOrigin: true
+    headers:
+      X-Forwarded-Host: $host
+
+  '/api/location':
+    target: http://192.168.1.189:3001
+    changeOrigin: true
+    
+  '/api/merchant':
+    target: http://192.168.1.189:3002
+    changeOrigin: true
+
+  '/api/user':
+    target: http://192.168.1.189:3003
+    changeOrigin: true
+
+  '/api/order':
+    target: http://192.168.1.189:3006
+    changeOrigin: true
+
+  '/api/payment':
+    target: http://192.168.1.189:3007
+    changeOrigin: true
+
+scaffolder:
+  defaultAuthor:
+    name: MSDP Platform Team
+    email: platform@msdp.local
+  defaultCommitMessage: 'Created from MSDP Backstage template'
+
+techdocs:
+  builder: 'local'
+  generator:
+    runIn: 'local'
+  publisher:
+    type: 'local'
+
+integrations:
+  github:
+    - host: github.com
+      # token: ${GITHUB_TOKEN}  # Optional for private repos

@@ -1,0 +1,185 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: create-msdp-service
+  title: Create MSDP Microservice
+  description: Create a new MSDP microservice with standard structure and configuration
+  tags:
+    - msdp
+    - microservice
+    - nodejs
+    - backend
+spec:
+  owner: platform-team
+  type: service
+  
+  parameters:
+    - title: Service Information
+      required:
+        - name
+        - description
+        - port
+      properties:
+        name:
+          title: Service Name
+          type: string
+          description: Name of the microservice (e.g., notification-service)
+          pattern: '^[a-z0-9-]+$'
+          ui:placeholder: 'notification-service'
+        description:
+          title: Service Description
+          type: string
+          description: What does this service do?
+          ui:placeholder: 'Handles email and SMS notifications for the platform'
+        port:
+          title: Service Port
+          type: number
+          description: Port number for the service
+          default: 3010
+          minimum: 3008
+          maximum: 3020
+
+    - title: Database Configuration
+      properties:
+        needsDatabase:
+          title: Requires Database
+          type: boolean
+          description: Does this service need its own PostgreSQL database?
+          default: true
+        databasePort:
+          title: Database Port
+          type: number
+          description: PostgreSQL port for this service
+          default: 5440
+          minimum: 5440
+          maximum: 5450
+
+    - title: Service Features
+      properties:
+        hasAuthentication:
+          title: Requires Authentication
+          type: boolean
+          description: Does this service need user authentication?
+          default: true
+        hasDocumentation:
+          title: API Documentation
+          type: boolean
+          description: Generate OpenAPI documentation?
+          default: true
+        hasTests:
+          title: Include Tests
+          type: boolean
+          description: Include Jest test setup?
+          default: true
+
+  steps:
+    - id: log-service-creation
+      name: Log Service Creation
+      action: debug:log
+      input:
+        message: |
+          🚀 Creating new MSDP service: ${{ parameters.name }}
+          📋 Description: ${{ parameters.description }}
+          🔌 Port: ${{ parameters.port }}
+          🗄️ Database: ${{ parameters.needsDatabase }}
+
+    - id: create-service-structure
+      name: Create Service Structure
+      action: fs:write
+      input:
+        path: service-structure.json
+        content: |
+          {
+            "serviceName": "${{ parameters.name }}",
+            "description": "${{ parameters.description }}",
+            "port": ${{ parameters.port }},
+            "database": {
+              "enabled": ${{ parameters.needsDatabase }},
+              "port": ${{ parameters.databasePort }}
+            },
+            "features": {
+              "authentication": ${{ parameters.hasAuthentication }},
+              "documentation": ${{ parameters.hasDocumentation }},
+              "tests": ${{ parameters.hasTests }}
+            },
+            "structure": {
+              "directories": [
+                "src/",
+                "src/routes/",
+                "src/models/",
+                "src/middleware/",
+                "src/config/",
+                "database/",
+                "tests/"
+              ],
+              "files": [
+                "package.json",
+                "src/server.js",
+                "src/config/database.js",
+                "database/schema.sql",
+                "Dockerfile.dev",
+                "docker-compose.dev.yml",
+                "dev-start.sh"
+              ]
+            }
+          }
+
+    - id: register-service
+      name: Register Service in Catalog
+      action: catalog:write
+      input:
+        entity:
+          apiVersion: backstage.io/v1alpha1
+          kind: Component
+          metadata:
+            name: ${{ parameters.name }}
+            description: ${{ parameters.description }}
+            annotations:
+              backstage.io/source-location: url:http://github.com/msdp-platform/msdp-platform-core/tree/dev/services/${{ parameters.name }}
+              msdp.platform/service-port: '${{ parameters.port }}'
+              msdp.platform/database-port: '${{ parameters.databasePort }}'
+            tags:
+              - nodejs
+              - microservice
+              - msdp-core
+              - new-service
+          spec:
+            type: service
+            lifecycle: development
+            owner: platform-team
+            system: msdp-platform
+            providesApis:
+              - ${{ parameters.name }}-api
+
+  output:
+    text:
+      - title: MSDP Service Created
+        content: |
+          🎉 **MSDP Microservice Created Successfully!**
+          
+          **🚀 Service Details:**
+          - **Name**: ${{ parameters.name }}
+          - **Description**: ${{ parameters.description }}
+          - **Port**: ${{ parameters.port }}
+          - **Database Port**: ${{ parameters.databasePort }}
+          
+          **📋 Features Configured:**
+          - **Authentication**: ${{ parameters.hasAuthentication }}
+          - **API Documentation**: ${{ parameters.hasDocumentation }}
+          - **Test Suite**: ${{ parameters.hasTests }}
+          - **Database**: ${{ parameters.needsDatabase }}
+          
+          **🔧 Next Steps:**
+          1. **Create service directory**: `/services/${{ parameters.name }}/`
+          2. **Implement service logic**: Follow MSDP service structure
+          3. **Add to platform config**: Update port allocations
+          4. **Create Docker setup**: Add to docker-compose
+          5. **Add to API Gateway**: Configure routing
+          
+          **📚 Follow MSDP service structure guidelines in documentation**
+          
+          **✅ Service registered in catalog and ready for development!**
+    links:
+      - title: View Service in Catalog
+        icon: catalog
+        entityRef: component:${{ parameters.name }}

@@ -1,0 +1,52 @@
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: platform-team
+  description: MSDP Platform Engineering Team - Responsible for core infrastructure and backend services
+spec:
+  type: team
+  children: []
+---
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: frontend-team
+  description: MSDP Frontend Development Team - Responsible for customer-facing applications
+spec:
+  type: team
+  children: []
+---
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: global-admins
+  description: MSDP Global Administrators - Platform-wide administrative access
+spec:
+  type: team
+  children: []
+---
+apiVersion: backstage.io/v1alpha1
+kind: User
+metadata:
+  name: santanu
+  description: MSDP Platform Owner and Lead Developer
+spec:
+  profile:
+    displayName: Santanu Biswas
+    email: santanu@msdp.platform
+  memberOf: 
+    - platform-team
+    - global-admins
+---
+apiVersion: backstage.io/v1alpha1
+kind: User
+metadata:
+  name: admin
+  description: MSDP Platform Administrator
+spec:
+  profile:
+    displayName: MSDP Admin
+    email: admin@msdp.platform
+  memberOf: 
+    - platform-team
+    - global-admins

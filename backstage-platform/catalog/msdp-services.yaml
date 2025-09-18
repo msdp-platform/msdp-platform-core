@@ -1,0 +1,285 @@
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: msdp-platform
+  description: Microservice Delivery Platform - Global marketplace connecting service providers with customers
+  tags:
+    - platform
+    - microservices
+    - nodejs
+    - marketplace
+spec:
+  owner: platform-team
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: api-gateway
+  description: MSDP API Gateway - Central entry point for all MSDP services
+  annotations:
+    backstage.io/source-location: url:http://github.com/msdp-platform/msdp-platform-core/tree/dev/services/api-gateway
+  tags:
+    - nodejs
+    - gateway
+    - msdp-core
+    - routing
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+  system: msdp-platform
+  providesApis:
+    - msdp-gateway-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: location-service
+  description: MSDP Location Management Service - Manages countries, cities, and service availability
+  annotations:
+    backstage.io/source-location: url:http://github.com/msdp-platform/msdp-platform-core/tree/dev/services/location-service
+  tags:
+    - nodejs
+    - microservice
+    - location
+    - msdp-core
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+  system: msdp-platform
+  providesApis:
+    - location-api
+  dependsOn:
+    - resource:location-database
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: merchant-service
+  description: MSDP Merchant/VendaBuddy Service - Business onboarding and management
+  annotations:
+    backstage.io/source-location: url:http://github.com/msdp-platform/msdp-platform-core/tree/dev/services/merchant-service
+  tags:
+    - nodejs
+    - microservice
+    - merchant
+    - vendabuddy
+    - msdp-core
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+  system: msdp-platform
+  providesApis:
+    - merchant-api
+  dependsOn:
+    - resource:merchant-database
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: user-service
+  description: MSDP User Management Service - Customer registration, authentication, and profiles
+  annotations:
+    backstage.io/source-location: url:http://github.com/msdp-platform/msdp-platform-core/tree/dev/services/user-service
+  tags:
+    - nodejs
+    - microservice
+    - user
+    - authentication
+    - msdp-core
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+  system: msdp-platform
+  providesApis:
+    - user-api
+  dependsOn:
+    - resource:user-database
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: order-service
+  description: MSDP Order Management Service - Order processing, cart management, and fulfillment
+  annotations:
+    backstage.io/source-location: url:http://github.com/msdp-platform/msdp-platform-core/tree/dev/services/order-service
+  tags:
+    - nodejs
+    - microservice
+    - order
+    - ecommerce
+    - msdp-core
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+  system: msdp-platform
+  providesApis:
+    - order-api
+  dependsOn:
+    - resource:order-database
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: payment-service
+  description: MSDP Payment Processing Service - Payment gateway integration and transaction management
+  annotations:
+    backstage.io/source-location: url:http://github.com/msdp-platform/msdp-platform-core/tree/dev/services/payment-service
+  tags:
+    - nodejs
+    - microservice
+    - payment
+    - fintech
+    - msdp-core
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+  system: msdp-platform
+  providesApis:
+    - payment-api
+  dependsOn:
+    - resource:payment-database
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: customer-app
+  description: MSDP Customer Web Application - Customer-facing marketplace for discovering and booking services
+  annotations:
+    backstage.io/source-location: url:http://github.com/msdp-platform/msdp-customer-frontends/tree/dev/apps/customer-app
+  tags:
+    - nextjs
+    - frontend
+    - customer
+    - webapp
+spec:
+  type: website
+  lifecycle: production
+  owner: frontend-team
+  system: msdp-platform
+  consumesApis:
+    - msdp-gateway-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: vendabuddy-app
+  description: MSDP VendaBuddy Merchant Application - Business management platform for service providers
+  annotations:
+    backstage.io/source-location: url:http://github.com/msdp-platform/msdp-merchant-frontends/tree/dev/apps/merchant-webapp
+  tags:
+    - nextjs
+    - frontend
+    - merchant
+    - vendabuddy
+    - webapp
+spec:
+  type: website
+  lifecycle: production
+  owner: frontend-team
+  system: msdp-platform
+  consumesApis:
+    - msdp-gateway-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: admin-dashboard
+  description: MSDP Admin Dashboard - Platform administration and monitoring interface
+  annotations:
+    backstage.io/source-location: url:http://github.com/msdp-platform/msdp-admin-frontends/tree/dev/apps/admin-dashboard
+  tags:
+    - nextjs
+    - frontend
+    - admin
+    - dashboard
+spec:
+  type: website
+  lifecycle: production
+  owner: platform-team
+  system: msdp-platform
+  consumesApis:
+    - msdp-gateway-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: msdp-gateway-api
+  description: MSDP API Gateway REST API
+spec:
+  type: openapi
+  lifecycle: production
+  owner: platform-team
+  system: msdp-platform
+  definition:
+    $text: http://192.168.1.189:3000/api/docs
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: location-api
+  description: Location Service REST API
+spec:
+  type: openapi
+  lifecycle: production
+  owner: platform-team
+  system: msdp-platform
+  definition:
+    $text: http://192.168.1.189:3001/api/docs
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: merchant-api
+  description: Merchant Service REST API
+spec:
+  type: openapi
+  lifecycle: production
+  owner: platform-team
+  system: msdp-platform
+  definition:
+    $text: http://192.168.1.189:3002/api/docs
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: user-api
+  description: User Service REST API
+spec:
+  type: openapi
+  lifecycle: production
+  owner: platform-team
+  system: msdp-platform
+  definition:
+    $text: http://192.168.1.189:3003/api/docs
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: order-api
+  description: Order Service REST API
+spec:
+  type: openapi
+  lifecycle: production
+  owner: platform-team
+  system: msdp-platform
+  definition:
+    $text: http://192.168.1.189:3006/api/docs
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: payment-api
+  description: Payment Service REST API
+spec:
+  type: openapi
+  lifecycle: production
+  owner: platform-team
+  system: msdp-platform
+  definition:
+    $text: http://192.168.1.189:3007/api/docs

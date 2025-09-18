@@ -1,0 +1,195 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: onboard-business
+  title: Onboard New Business
+  description: Onboard a new business to the VendaBuddy platform with approval workflow
+  tags:
+    - msdp
+    - vendabuddy
+    - business
+    - onboarding
+spec:
+  owner: platform-team
+  type: business
+  
+  parameters:
+    - title: Business Information
+      required:
+        - businessName
+        - businessType
+        - location
+        - contactEmail
+      properties:
+        businessName:
+          title: Business Name
+          type: string
+          description: Legal business name
+          ui:placeholder: 'Santanu Street Food Corner'
+        businessType:
+          title: Business Type
+          type: string
+          description: Type of service provided
+          enum:
+            - food_service
+            - home_service
+            - digital_service
+            - professional_service
+            - logistics
+            - creative_service
+          enumNames:
+            - 'Food Service (Restaurants, Street Food)'
+            - 'Home Service (Cleaning, Maintenance)'
+            - 'Digital Service (IT, Design, Marketing)'
+            - 'Professional Service (Consulting, Legal)'
+            - 'Logistics (Delivery, Transport)'
+            - 'Creative Service (Photography, Events)'
+        location:
+          title: Operating Location
+          type: string
+          description: City, Country where business operates
+          ui:placeholder: 'London, GB'
+        contactEmail:
+          title: Contact Email
+          type: string
+          format: email
+          description: Primary contact email for the business
+          
+    - title: Service Details
+      properties:
+        serviceDescription:
+          title: Service Description
+          type: string
+          description: Detailed description of services offered
+          ui:widget: textarea
+          ui:placeholder: 'We provide authentic Indian street food...'
+        operatingHours:
+          title: Operating Hours
+          type: string
+          description: Business operating hours
+          ui:placeholder: '9:00 AM - 10:00 PM, Monday to Sunday'
+        deliveryRadius:
+          title: Delivery Radius (km)
+          type: number
+          description: Service delivery radius in kilometers
+          default: 5
+          minimum: 1
+          maximum: 50
+
+    - title: Business Documents
+      properties:
+        hasBusinessLicense:
+          title: Business License Available
+          type: boolean
+          description: Do you have a valid business license?
+          default: false
+        hasInsurance:
+          title: Business Insurance
+          type: boolean
+          description: Do you have business insurance?
+          default: false
+        hasHealthCertificate:
+          title: Health Certificate (Food Services)
+          type: boolean
+          description: Required for food service businesses
+          default: false
+
+  steps:
+    - id: create-business-profile
+      name: Create Business Profile
+      action: fs:write
+      input:
+        path: business-profile.json
+        content: |
+          {
+            "businessName": "${{ parameters.businessName }}",
+            "businessType": "${{ parameters.businessType }}",
+            "location": "${{ parameters.location }}",
+            "contactEmail": "${{ parameters.contactEmail }}",
+            "serviceDescription": "${{ parameters.serviceDescription }}",
+            "operatingHours": "${{ parameters.operatingHours }}",
+            "deliveryRadius": ${{ parameters.deliveryRadius }},
+            "compliance": {
+              "hasBusinessLicense": ${{ parameters.hasBusinessLicense }},
+              "hasInsurance": ${{ parameters.hasInsurance }},
+              "hasHealthCertificate": ${{ parameters.hasHealthCertificate }}
+            },
+            "status": "pending_approval",
+            "applicationDate": "${{ "now" | date("iso") }}",
+            "approvalRequired": true
+          }
+
+    - id: log-business-application
+      name: Log Business Application
+      action: debug:log
+      input:
+        message: |
+          🏪 New business application received:
+          📋 Business: ${{ parameters.businessName }}
+          🏷️ Type: ${{ parameters.businessType }}
+          📍 Location: ${{ parameters.location }}
+          📧 Contact: ${{ parameters.contactEmail }}
+          🚀 Status: Pending admin approval
+
+    - id: register-business
+      name: Register Business in Catalog
+      action: catalog:write
+      input:
+        entity:
+          apiVersion: backstage.io/v1alpha1
+          kind: Component
+          metadata:
+            name: ${{ parameters.businessName | lower | replace(" ", "-") | replace("'", "") }}
+            description: ${{ parameters.businessType }} business - ${{ parameters.businessName }}
+            annotations:
+              msdp.platform/business-type: ${{ parameters.businessType }}
+              msdp.platform/location: ${{ parameters.location }}
+              msdp.platform/contact-email: ${{ parameters.contactEmail }}
+              msdp.platform/status: pending_approval
+            tags:
+              - business
+              - vendabuddy
+              - ${{ parameters.businessType }}
+              - ${{ parameters.location | lower | replace(" ", "-") | replace(",", "") }}
+          spec:
+            type: business
+            lifecycle: pending
+            owner: frontend-team
+            system: msdp-platform
+
+  output:
+    text:
+      - title: Business Application Submitted
+        content: |
+          🎉 **Business Application Submitted Successfully!**
+          
+          **📋 Application Details:**
+          - **Business Name**: ${{ parameters.businessName }}
+          - **Type**: ${{ parameters.businessType }}
+          - **Location**: ${{ parameters.location }}
+          - **Contact**: ${{ parameters.contactEmail }}
+          
+          **🏪 Service Information:**
+          - **Description**: ${{ parameters.serviceDescription }}
+          - **Operating Hours**: ${{ parameters.operatingHours }}
+          - **Delivery Radius**: ${{ parameters.deliveryRadius }} km
+          
+          **📋 Compliance Status:**
+          - **Business License**: ${{ parameters.hasBusinessLicense }}
+          - **Insurance**: ${{ parameters.hasInsurance }}
+          - **Health Certificate**: ${{ parameters.hasHealthCertificate }}
+          
+          **⏳ Next Steps:**
+          1. **Admin Review**: Application pending platform admin approval
+          2. **Verification**: Compliance documents will be reviewed
+          3. **Approval**: You'll receive email confirmation when approved
+          4. **Onboarding**: VendaBuddy account will be activated
+          5. **Go Live**: Business will appear in Customer App
+          
+          **📧 You will receive updates at**: ${{ parameters.contactEmail }}
+          
+          **✅ Application ID**: ${{ parameters.businessName | lower | replace(" ", "-") }}
+    links:
+      - title: View Application in Catalog
+        icon: catalog
+        entityRef: component:${{ parameters.businessName | lower | replace(" ", "-") | replace("'", "") }}
