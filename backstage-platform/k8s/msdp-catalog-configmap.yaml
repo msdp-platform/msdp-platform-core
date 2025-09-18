@@ -1,0 +1,135 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: msdp-catalog
+  namespace: msdp-platform
+data:
+  msdp-services.yaml: |
+    apiVersion: backstage.io/v1alpha1
+    kind: System
+    metadata:
+      name: msdp-platform
+      description: Microservice Delivery Platform - Global marketplace
+      tags:
+        - platform
+        - microservices
+        - azure
+        - serverless
+    spec:
+      owner: platform-team
+    ---
+    apiVersion: backstage.io/v1alpha1
+    kind: Component
+    metadata:
+      name: location-service
+      description: MSDP Location Management Service (Azure Functions)
+      tags:
+        - azure-functions
+        - microservice
+        - location
+        - serverless
+    spec:
+      type: service
+      lifecycle: production
+      owner: platform-team
+      system: msdp-platform
+    ---
+    apiVersion: backstage.io/v1alpha1
+    kind: Component
+    metadata:
+      name: merchant-service
+      description: MSDP Merchant/VendaBuddy Service (Azure Functions)
+      tags:
+        - azure-functions
+        - microservice
+        - merchant
+        - vendabuddy
+        - serverless
+    spec:
+      type: service
+      lifecycle: production
+      owner: platform-team
+      system: msdp-platform
+    ---
+    apiVersion: backstage.io/v1alpha1
+    kind: Component
+    metadata:
+      name: user-service
+      description: MSDP User Management Service (Azure Functions)
+      tags:
+        - azure-functions
+        - microservice
+        - user
+        - authentication
+        - serverless
+    spec:
+      type: service
+      lifecycle: production
+      owner: platform-team
+      system: msdp-platform
+    ---
+    apiVersion: backstage.io/v1alpha1
+    kind: Component
+    metadata:
+      name: order-service
+      description: MSDP Order Management Service (Azure Functions)
+      tags:
+        - azure-functions
+        - microservice
+        - order
+        - ecommerce
+        - serverless
+    spec:
+      type: service
+      lifecycle: production
+      owner: platform-team
+      system: msdp-platform
+    ---
+    apiVersion: backstage.io/v1alpha1
+    kind: Component
+    metadata:
+      name: payment-service
+      description: MSDP Payment Processing Service (Azure Functions)
+      tags:
+        - azure-functions
+        - microservice
+        - payment
+        - fintech
+        - serverless
+    spec:
+      type: service
+      lifecycle: production
+      owner: platform-team
+      system: msdp-platform
+
+  msdp-teams.yaml: |
+    apiVersion: backstage.io/v1alpha1
+    kind: Group
+    metadata:
+      name: platform-team
+      description: MSDP Platform Engineering Team
+    spec:
+      type: team
+      children: []
+    ---
+    apiVersion: backstage.io/v1alpha1
+    kind: Group
+    metadata:
+      name: azure-admins
+      description: MSDP Azure Administrators
+    spec:
+      type: team
+      children: []
+    ---
+    apiVersion: backstage.io/v1alpha1
+    kind: User
+    metadata:
+      name: santanu
+      description: MSDP Platform Owner
+    spec:
+      profile:
+        displayName: Santanu Biswas
+        email: santanu@msdp.platform
+      memberOf: 
+        - platform-team
+        - azure-admins
