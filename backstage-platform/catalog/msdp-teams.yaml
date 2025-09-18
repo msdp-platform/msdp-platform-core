@@ -34,7 +34,7 @@ spec:
   profile:
     displayName: Santanu Biswas
     email: santanu@msdp.platform
-  memberOf: 
+  memberOf:
     - platform-team
     - global-admins
 ---
@@ -47,6 +47,6 @@ spec:
   profile:
     displayName: MSDP Admin
     email: admin@msdp.platform
-  memberOf: 
+  memberOf:
     - platform-team
     - global-admins

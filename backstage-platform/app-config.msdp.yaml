@@ -13,17 +13,17 @@ backend:
   listen:
     host: 0.0.0.0
     port: 7007
-  
+
   cors:
-    origin: 
+    origin:
       - http://192.168.1.102:3000
-      - http://192.168.1.189:*  # Your laptop IP
+      - http://192.168.1.189:* # Your laptop IP
       - http://localhost:*
     credentials: true
 
   database:
     client: better-sqlite3
-    connection: ':memory:'
+    connection: ":memory:"
 
 auth:
   environment: development
@@ -38,7 +38,7 @@ auth:
 catalog:
   rules:
     - allow: [Component, System, API, Resource, Location, User, Group, Template]
-  
+
   locations:
     - type: file
       target: ./catalog/msdp-services.yaml
@@ -53,29 +53,29 @@ catalog:
 
 # API Proxies for MSDP Services (Your laptop: 192.168.1.189)
 proxy:
-  '/api/msdp':
+  "/api/msdp":
     target: http://192.168.1.189:3000
     changeOrigin: true
     headers:
       X-Forwarded-Host: $host
 
-  '/api/location':
+  "/api/location":
     target: http://192.168.1.189:3001
     changeOrigin: true
-    
-  '/api/merchant':
+
+  "/api/merchant":
     target: http://192.168.1.189:3002
     changeOrigin: true
 
-  '/api/user':
+  "/api/user":
     target: http://192.168.1.189:3003
     changeOrigin: true
 
-  '/api/order':
+  "/api/order":
     target: http://192.168.1.189:3006
     changeOrigin: true
 
-  '/api/payment':
+  "/api/payment":
     target: http://192.168.1.189:3007
     changeOrigin: true
 
@@ -83,14 +83,14 @@ scaffolder:
   defaultAuthor:
     name: MSDP Platform Team
     email: platform@msdp.local
-  defaultCommitMessage: 'Created from MSDP Backstage template'
+  defaultCommitMessage: "Created from MSDP Backstage template"
 
 techdocs:
-  builder: 'local'
+  builder: "local"
   generator:
-    runIn: 'local'
+    runIn: "local"
   publisher:
-    type: 'local'
+    type: "local"
 
 integrations:
   github:
