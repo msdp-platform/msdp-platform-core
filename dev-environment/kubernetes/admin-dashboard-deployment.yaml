@@ -1,0 +1,356 @@
+# Admin Dashboard Frontend Deployment
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: admin-dashboard-config
+  namespace: dev-santanu
+  labels:
+    app: admin-dashboard
+data:
+  # Next.js Environment Variables
+  NEXT_PUBLIC_API_URL: "https://api.dev.aztech-msdp.com"
+  NEXT_PUBLIC_ADMIN_API_URL: "https://admin.dev.aztech-msdp.com"
+  NEXT_PUBLIC_MERCHANT_API_URL: "https://merchant.dev.aztech-msdp.com"
+  NEXT_PUBLIC_USER_API_URL: "https://auth.dev.aztech-msdp.com"
+  NEXT_PUBLIC_ORDER_API_URL: "https://orders.dev.aztech-msdp.com"
+  NEXT_PUBLIC_PAYMENT_API_URL: "https://payments.dev.aztech-msdp.com"
+  
+  # Environment Configuration
+  NODE_ENV: "development"
+  NEXT_PUBLIC_ENV: "development"
+  NEXT_PUBLIC_ENVIRONMENT: "dev"
+  
+  # Feature Flags
+  NEXT_PUBLIC_ENABLE_DEBUG: "true"
+  NEXT_PUBLIC_ENABLE_ANALYTICS: "false"
+
+---
+# Admin Dashboard Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin-dashboard
+  namespace: dev-santanu
+  labels:
+    app: admin-dashboard
+    component: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: admin-dashboard
+  template:
+    metadata:
+      labels:
+        app: admin-dashboard
+        component: frontend
+    spec:
+      containers:
+      - name: admin-dashboard
+        image: node:18-alpine
+        ports:
+        - containerPort: 3000
+        envFrom:
+        - configMapRef:
+            name: admin-dashboard-config
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        command: ["/bin/sh"]
+        args:
+        - -c
+        - |
+          echo "🎛️ Starting MSDP Admin Dashboard"
+          
+          # Create Next.js Admin Dashboard
+          cat > package.json << 'EOF'
+          {
+            "name": "msdp-admin-dashboard",
+            "version": "1.0.0-dev",
+            "private": true,
+            "scripts": {
+              "dev": "next dev",
+              "build": "next build",
+              "start": "next start",
+              "lint": "next lint"
+            },
+            "dependencies": {
+              "next": "15.0.0",
+              "react": "18.2.0",
+              "react-dom": "18.2.0",
+              "axios": "^1.6.0",
+              "@types/node": "^20",
+              "@types/react": "^18",
+              "@types/react-dom": "^18",
+              "typescript": "^5"
+            }
+          }
+          EOF
+          
+          echo "📦 Installing dependencies..."
+          npm install --silent
+          
+          # Create Next.js config
+          cat > next.config.js << 'EOF'
+          /** @type {import('next').NextConfig} */
+          const nextConfig = {
+            env: {
+              NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+              NEXT_PUBLIC_ADMIN_API_URL: process.env.NEXT_PUBLIC_ADMIN_API_URL,
+              NEXT_PUBLIC_MERCHANT_API_URL: process.env.NEXT_PUBLIC_MERCHANT_API_URL,
+            },
+            async rewrites() {
+              return [
+                {
+                  source: '/api/:path*',
+                  destination: `${process.env.NEXT_PUBLIC_API_URL}/:path*`,
+                },
+              ];
+            },
+          };
+          
+          module.exports = nextConfig;
+          EOF
+          
+          # Create main page
+          mkdir -p pages/api
+          cat > pages/index.tsx << 'EOF'
+          import { useState, useEffect } from 'react';
+          import Head from 'next/head';
+          
+          interface ServiceHealth {
+            service: string;
+            status: string;
+            version?: string;
+          }
+          
+          export default function AdminDashboard() {
+            const [services, setServices] = useState<ServiceHealth[]>([]);
+            const [loading, setLoading] = useState(true);
+          
+            useEffect(() => {
+              const checkServices = async () => {
+                const serviceUrls = [
+                  { name: 'API Gateway', url: process.env.NEXT_PUBLIC_API_URL },
+                  { name: 'Admin Service', url: process.env.NEXT_PUBLIC_ADMIN_API_URL },
+                  { name: 'Merchant Service', url: process.env.NEXT_PUBLIC_MERCHANT_API_URL },
+                  { name: 'User Service', url: process.env.NEXT_PUBLIC_USER_API_URL },
+                  { name: 'Order Service', url: process.env.NEXT_PUBLIC_ORDER_API_URL },
+                  { name: 'Payment Service', url: process.env.NEXT_PUBLIC_PAYMENT_API_URL },
+                ];
+          
+                const healthChecks = await Promise.all(
+                  serviceUrls.map(async ({ name, url }) => {
+                    try {
+                      const response = await fetch(`${url}/health`);
+                      const data = await response.json();
+                      return {
+                        service: name,
+                        status: data.status || 'unknown',
+                        version: data.version,
+                      };
+                    } catch (error) {
+                      return {
+                        service: name,
+                        status: 'error',
+                      };
+                    }
+                  })
+                );
+          
+                setServices(healthChecks);
+                setLoading(false);
+              };
+          
+              checkServices();
+            }, []);
+          
+            return (
+              <div style={{ fontFamily: 'Arial, sans-serif', padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                <Head>
+                  <title>MSDP Admin Dashboard</title>
+                  <meta name="description" content="MSDP Platform Administration" />
+                </Head>
+          
+                <header style={{ marginBottom: '40px', textAlign: 'center' }}>
+                  <h1 style={{ color: '#2563eb', fontSize: '2.5rem', marginBottom: '10px' }}>
+                    🎛️ MSDP Admin Dashboard
+                  </h1>
+                  <p style={{ color: '#6b7280', fontSize: '1.2rem' }}>
+                    Platform Management & Service Orchestration
+                  </p>
+                  <div style={{ 
+                    backgroundColor: '#f0f9ff', 
+                    border: '1px solid #0ea5e9', 
+                    borderRadius: '8px', 
+                    padding: '10px', 
+                    marginTop: '20px',
+                    display: 'inline-block'
+                  }}>
+                    <strong>Environment:</strong> Development | <strong>Version:</strong> 1.0.0-dev
+                  </div>
+                </header>
+          
+                <main>
+                  <section style={{ marginBottom: '40px' }}>
+                    <h2 style={{ color: '#1f2937', marginBottom: '20px' }}>🌐 Service Health Status</h2>
+                    {loading ? (
+                      <p>Loading service status...</p>
+                    ) : (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+                        {services.map((service) => (
+                          <div
+                            key={service.service}
+                            style={{
+                              backgroundColor: service.status === 'healthy' ? '#f0fdf4' : '#fef2f2',
+                              border: `2px solid ${service.status === 'healthy' ? '#22c55e' : '#ef4444'}`,
+                              borderRadius: '8px',
+                              padding: '20px',
+                            }}
+                          >
+                            <h3 style={{ margin: '0 0 10px 0', color: '#1f2937' }}>
+                              {service.status === 'healthy' ? '✅' : '❌'} {service.service}
+                            </h3>
+                            <p style={{ margin: '5px 0', color: '#6b7280' }}>
+                              <strong>Status:</strong> {service.status}
+                            </p>
+                            {service.version && (
+                              <p style={{ margin: '5px 0', color: '#6b7280' }}>
+                                <strong>Version:</strong> {service.version}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+          
+                  <section style={{ marginBottom: '40px' }}>
+                    <h2 style={{ color: '#1f2937', marginBottom: '20px' }}>🏪 VendaBuddy Management</h2>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
+                      <div style={{ backgroundColor: '#fefce8', border: '2px solid #eab308', borderRadius: '8px', padding: '20px' }}>
+                        <h3 style={{ margin: '0 0 10px 0', color: '#1f2937' }}>📊 Merchant Analytics</h3>
+                        <p style={{ color: '#6b7280' }}>View business performance and metrics</p>
+                        <button style={{ 
+                          backgroundColor: '#eab308', 
+                          color: 'white', 
+                          border: 'none', 
+                          padding: '8px 16px', 
+                          borderRadius: '4px', 
+                          cursor: 'pointer',
+                          marginTop: '10px'
+                        }}>
+                          View Analytics
+                        </button>
+                      </div>
+                      
+                      <div style={{ backgroundColor: '#f0f9ff', border: '2px solid #0ea5e9', borderRadius: '8px', padding: '20px' }}>
+                        <h3 style={{ margin: '0 0 10px 0', color: '#1f2937' }}>👥 User Management</h3>
+                        <p style={{ color: '#6b7280' }}>Manage merchants and customers</p>
+                        <button style={{ 
+                          backgroundColor: '#0ea5e9', 
+                          color: 'white', 
+                          border: 'none', 
+                          padding: '8px 16px', 
+                          borderRadius: '4px', 
+                          cursor: 'pointer',
+                          marginTop: '10px'
+                        }}>
+                          Manage Users
+                        </button>
+                      </div>
+                      
+                      <div style={{ backgroundColor: '#f0fdf4', border: '2px solid #22c55e', borderRadius: '8px', padding: '20px' }}>
+                        <h3 style={{ margin: '0 0 10px 0', color: '#1f2937' }}>💳 Payment Oversight</h3>
+                        <p style={{ color: '#6b7280' }}>Monitor transactions and payouts</p>
+                        <button style={{ 
+                          backgroundColor: '#22c55e', 
+                          color: 'white', 
+                          border: 'none', 
+                          padding: '8px 16px', 
+                          borderRadius: '4px', 
+                          cursor: 'pointer',
+                          marginTop: '10px'
+                        }}>
+                          View Payments
+                        </button>
+                      </div>
+                    </div>
+                  </section>
+          
+                  <section>
+                    <h2 style={{ color: '#1f2937', marginBottom: '20px' }}>🔧 Platform Tools</h2>
+                    <div style={{ backgroundColor: '#f9fafb', border: '1px solid #d1d5db', borderRadius: '8px', padding: '20px' }}>
+                      <h3 style={{ margin: '0 0 15px 0', color: '#1f2937' }}>🌐 API Endpoints</h3>
+                      <div style={{ fontFamily: 'monospace', fontSize: '14px' }}>
+                        <p><strong>API Gateway:</strong> {process.env.NEXT_PUBLIC_API_URL}</p>
+                        <p><strong>Admin API:</strong> {process.env.NEXT_PUBLIC_ADMIN_API_URL}</p>
+                        <p><strong>Merchant API:</strong> {process.env.NEXT_PUBLIC_MERCHANT_API_URL}</p>
+                        <p><strong>User API:</strong> {process.env.NEXT_PUBLIC_USER_API_URL}</p>
+                        <p><strong>Order API:</strong> {process.env.NEXT_PUBLIC_ORDER_API_URL}</p>
+                        <p><strong>Payment API:</strong> {process.env.NEXT_PUBLIC_PAYMENT_API_URL}</p>
+                      </div>
+                    </div>
+                  </section>
+                </main>
+          
+                <footer style={{ marginTop: '60px', textAlign: 'center', color: '#6b7280', borderTop: '1px solid #e5e7eb', paddingTop: '20px' }}>
+                  <p>MSDP Platform - VendaBuddy Administration | Environment: Development</p>
+                  <p>🚀 Powered by Kubernetes + Next.js + Azure AKS</p>
+                </footer>
+              </div>
+            );
+          }
+          EOF
+          
+          # Create API health check endpoint
+          cat > pages/api/health.ts << 'EOF'
+          import type { NextApiRequest, NextApiResponse } from 'next';
+          
+          export default function handler(req: NextApiRequest, res: NextApiResponse) {
+            res.status(200).json({
+              status: 'healthy',
+              service: 'msdp-admin-dashboard',
+              version: '1.0.0-dev',
+              timestamp: new Date().toISOString(),
+              environment: process.env.NODE_ENV || 'development',
+            });
+          }
+          EOF
+          
+          echo "🚀 Starting Admin Dashboard..."
+          npm run dev -- --hostname 0.0.0.0 --port 3000
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 15
+          periodSeconds: 10
+
+---
+# Admin Dashboard Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin-dashboard
+  namespace: dev-santanu
+  labels:
+    app: admin-dashboard
+spec:
+  selector:
+    app: admin-dashboard
+  ports:
+  - port: 3000
+    targetPort: 3000
+    protocol: TCP
+  type: ClusterIP

@@ -1,0 +1,277 @@
+apiVersion: skaffold/v4beta1
+kind: Config
+metadata:
+  name: msdp-development
+
+# Global configuration
+build:
+  local:
+    push: false
+    useDockerCLI: true
+  tagPolicy:
+    envTemplate:
+      template: "{{.IMAGE_NAME}}:dev-{{.USER}}-{{.TIMESTAMP}}"
+
+# Development profiles for different roles
+profiles:
+# Full platform development (all services)
+- name: full
+  activation:
+  - env: PROFILE=full
+  build:
+    artifacts:
+    - image: msdp/admin-service
+      context: services/admin-service
+      docker:
+        dockerfile: Dockerfile.dev
+      sync:
+        manual:
+        - src: "src/**/*.js"
+          dest: /app/src
+        - src: "package.json"
+          dest: /app
+    - image: msdp/merchant-service
+      context: services/merchant-service
+      docker:
+        dockerfile: Dockerfile.dev
+      sync:
+        manual:
+        - src: "src/**/*.js"
+          dest: /app/src
+        - src: "package.json"
+          dest: /app
+    - image: msdp/user-service
+      context: services/user-service
+      docker:
+        dockerfile: Dockerfile.dev
+      sync:
+        manual:
+        - src: "src/**/*.js"
+          dest: /app/src
+        - src: "package.json"
+          dest: /app
+    - image: msdp/order-service
+      context: services/order-service
+      docker:
+        dockerfile: Dockerfile.dev
+      sync:
+        manual:
+        - src: "src/**/*.js"
+          dest: /app/src
+        - src: "package.json"
+          dest: /app
+    - image: msdp/payment-service
+      context: services/payment-service
+      docker:
+        dockerfile: Dockerfile.dev
+      sync:
+        manual:
+        - src: "src/**/*.js"
+          dest: /app/src
+        - src: "package.json"
+          dest: /app
+    - image: msdp/api-gateway
+      context: services/api-gateway
+      docker:
+        dockerfile: Dockerfile.dev
+      sync:
+        manual:
+        - src: "src/**/*.js"
+          dest: /app/src
+        - src: "package.json"
+          dest: /app
+  deploy:
+    helm:
+      releases:
+      - name: msdp-platform
+        chartPath: dev-environment/helm/msdp-platform
+        valuesFiles:
+        - dev-environment/helm/values/full.yaml
+        setValues:
+          global.namespace: "{{.SKAFFOLD_NAMESPACE}}"
+          global.environment: development
+          global.developer: "{{.USER}}"
+        upgradeOnChange: true
+        wait: true
+  portForward:
+  - resourceType: service
+    resourceName: admin-dashboard
+    port: 4000
+    localPort: 4000
+  - resourceType: service
+    resourceName: api-gateway
+    port: 3000
+    localPort: 3000
+
+# Admin-focused development
+- name: admin
+  activation:
+  - env: PROFILE=admin
+  build:
+    artifacts:
+    - image: msdp/admin-service
+      context: services/admin-service
+      docker:
+        dockerfile: Dockerfile.dev
+      sync:
+        manual:
+        - src: "src/**/*.js"
+          dest: /app/src
+        - src: "package.json"
+          dest: /app
+    - image: msdp/user-service
+      context: services/user-service
+      docker:
+        dockerfile: Dockerfile.dev
+      sync:
+        manual:
+        - src: "src/**/*.js"
+          dest: /app/src
+        - src: "package.json"
+          dest: /app
+  deploy:
+    helm:
+      releases:
+      - name: msdp-admin-stack
+        chartPath: dev-environment/helm/admin-stack
+        valuesFiles:
+        - dev-environment/helm/values/admin.yaml
+        setValues:
+          global.namespace: "{{.SKAFFOLD_NAMESPACE}}"
+          global.environment: development
+          global.developer: "{{.USER}}"
+        upgradeOnChange: true
+        wait: true
+  portForward:
+  - resourceType: service
+    resourceName: admin-dashboard
+    port: 4000
+    localPort: 4000
+  - resourceType: service
+    resourceName: admin-service
+    port: 3005
+    localPort: 3005
+
+# Merchant/VendaBuddy-focused development
+- name: merchant
+  activation:
+  - env: PROFILE=merchant
+  build:
+    artifacts:
+    - image: msdp/merchant-service
+      context: services/merchant-service
+      docker:
+        dockerfile: Dockerfile.dev
+      sync:
+        manual:
+        - src: "src/**/*.js"
+          dest: /app/src
+        - src: "package.json"
+          dest: /app
+    - image: msdp/order-service
+      context: services/order-service
+      docker:
+        dockerfile: Dockerfile.dev
+      sync:
+        manual:
+        - src: "src/**/*.js"
+          dest: /app/src
+        - src: "package.json"
+          dest: /app
+    - image: msdp/payment-service
+      context: services/payment-service
+      docker:
+        dockerfile: Dockerfile.dev
+      sync:
+        manual:
+        - src: "src/**/*.js"
+          dest: /app/src
+        - src: "package.json"
+          dest: /app
+    - image: msdp/user-service
+      context: services/user-service
+      docker:
+        dockerfile: Dockerfile.dev
+      sync:
+        manual:
+        - src: "src/**/*.js"
+          dest: /app/src
+        - src: "package.json"
+          dest: /app
+  deploy:
+    helm:
+      releases:
+      - name: msdp-merchant-stack
+        chartPath: dev-environment/helm/merchant-stack
+        valuesFiles:
+        - dev-environment/helm/values/merchant.yaml
+        setValues:
+          global.namespace: "{{.SKAFFOLD_NAMESPACE}}"
+          global.environment: development
+          global.developer: "{{.USER}}"
+        upgradeOnChange: true
+        wait: true
+  portForward:
+  - resourceType: service
+    resourceName: merchant-webapp
+    port: 4003
+    localPort: 4003
+  - resourceType: service
+    resourceName: merchant-service
+    port: 3002
+    localPort: 3002
+
+# Staging profile for demos
+- name: staging
+  activation:
+  - env: PROFILE=staging
+  build:
+    artifacts:
+    - image: msdp/admin-service
+      context: services/admin-service
+      docker:
+        dockerfile: Dockerfile
+    - image: msdp/merchant-service
+      context: services/merchant-service
+      docker:
+        dockerfile: Dockerfile
+    - image: msdp/user-service
+      context: services/user-service
+      docker:
+        dockerfile: Dockerfile
+    - image: msdp/order-service
+      context: services/order-service
+      docker:
+        dockerfile: Dockerfile
+    - image: msdp/payment-service
+      context: services/payment-service
+      docker:
+        dockerfile: Dockerfile
+    - image: msdp/api-gateway
+      context: services/api-gateway
+      docker:
+        dockerfile: Dockerfile
+  deploy:
+    helm:
+      releases:
+      - name: msdp-staging
+        chartPath: dev-environment/helm/msdp-platform
+        valuesFiles:
+        - dev-environment/helm/values/staging.yaml
+        setValues:
+          global.namespace: "{{.SKAFFOLD_NAMESPACE}}"
+          global.environment: staging
+          global.replicas: 2
+        upgradeOnChange: true
+        wait: true
+
+# Test configuration
+test:
+- image: msdp/admin-service
+  custom:
+  - command: "npm test"
+- image: msdp/merchant-service
+  custom:
+  - command: "npm test"
+
+# File watching configuration moved to individual artifacts

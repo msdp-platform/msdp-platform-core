@@ -1,0 +1,194 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: platform-engineering-service
+  title: Platform Engineering Service
+  description: Create a new service with full platform engineering integration (ArgoCD + Crossplane + Kubernetes)
+  tags:
+    - msdp
+    - platform-engineering
+    - argocd
+    - crossplane
+    - kubernetes
+    - gitops
+spec:
+  owner: platform-team
+  type: service
+  
+  parameters:
+    - title: Service Information
+      required:
+        - name
+        - description
+        - port
+        - team
+      properties:
+        name:
+          title: Service Name
+          type: string
+          description: Name of the service (e.g., payment-processor)
+          pattern: '^[a-z0-9-]+$'
+          ui:placeholder: 'payment-processor'
+        description:
+          title: Service Description
+          type: string
+          description: Brief description of the service
+          ui:placeholder: 'Handles payment processing for MSDP platform'
+        port:
+          title: Service Port
+          type: number
+          description: Port number for the service
+          default: 3000
+          minimum: 3000
+          maximum: 9999
+        team:
+          title: Owning Team
+          type: string
+          description: Team responsible for this service
+          enum:
+            - platform-team
+            - backend-team
+            - frontend-team
+            - data-team
+          enumNames:
+            - Platform Team
+            - Backend Team
+            - Frontend Team
+            - Data Team
+
+    - title: Infrastructure Configuration
+      required:
+        - environment
+        - database
+        - monitoring
+      properties:
+        environment:
+          title: Target Environment
+          type: string
+          description: Environment for deployment
+          enum:
+            - dev
+            - staging
+            - prod
+          enumNames:
+            - Development
+            - Staging
+            - Production
+          default: dev
+        database:
+          title: Database Type
+          type: string
+          description: Database requirement
+          enum:
+            - none
+            - postgresql
+            - mongodb
+            - redis
+          enumNames:
+            - No Database
+            - PostgreSQL
+            - MongoDB
+            - Redis Cache
+          default: postgresql
+        monitoring:
+          title: Enable Monitoring
+          type: boolean
+          description: Include Prometheus metrics and Grafana dashboards
+          default: true
+
+    - title: GitOps Configuration
+      required:
+        - gitops
+        - crossplane
+      properties:
+        gitops:
+          title: Enable GitOps (ArgoCD)
+          type: boolean
+          description: Create ArgoCD application for automated deployment
+          default: true
+        crossplane:
+          title: Infrastructure as Code
+          type: boolean
+          description: Create Crossplane resources for infrastructure
+          default: true
+        helm:
+          title: Helm Chart
+          type: boolean
+          description: Generate Helm chart for Kubernetes deployment
+          default: true
+
+  steps:
+    - id: fetch-base
+      name: Fetch Base Template
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          name: ${{ parameters.name }}
+          description: ${{ parameters.description }}
+          port: ${{ parameters.port }}
+          team: ${{ parameters.team }}
+          environment: ${{ parameters.environment }}
+          database: ${{ parameters.database }}
+          monitoring: ${{ parameters.monitoring }}
+          gitops: ${{ parameters.gitops }}
+          crossplane: ${{ parameters.crossplane }}
+          helm: ${{ parameters.helm }}
+
+    - id: publish
+      name: Publish to GitHub
+      action: publish:github
+      input:
+        repoUrl: github.com?repo=${{ parameters.name }}&owner=msdp-platform
+        description: ${{ parameters.description }}
+        defaultBranch: main
+        gitCommitMessage: 'Initial commit: ${{ parameters.name }} service'
+        gitAuthorName: 'Backstage Scaffolder'
+        gitAuthorEmail: 'backstage@msdp.platform'
+
+    - id: create-argocd-app
+      name: Create ArgoCD Application
+      if: ${{ parameters.gitops }}
+      action: argocd:create-app
+      input:
+        appName: ${{ parameters.name }}
+        projectName: msdp-platform
+        repoUrl: https://github.com/msdp-platform/${{ parameters.name }}
+        path: k8s/
+        server: https://kubernetes.default.svc
+        namespace: msdp-${{ parameters.environment }}
+        syncPolicy:
+          automated:
+            prune: true
+            selfHeal: true
+
+    - id: create-crossplane-resources
+      name: Create Infrastructure Resources
+      if: ${{ parameters.crossplane }}
+      action: crossplane:create-resources
+      input:
+        serviceName: ${{ parameters.name }}
+        environment: ${{ parameters.environment }}
+        database: ${{ parameters.database }}
+        monitoring: ${{ parameters.monitoring }}
+
+    - id: register
+      name: Register in Catalog
+      action: catalog:register
+      input:
+        repoContentsUrl: https://github.com/msdp-platform/${{ parameters.name }}
+        catalogInfoPath: '/catalog-info.yaml'
+
+  output:
+    links:
+      - title: Repository
+        url: https://github.com/msdp-platform/${{ parameters.name }}
+      - title: ArgoCD Application
+        url: https://argocd.dev.aztech-msdp.com/applications/${{ parameters.name }}
+        icon: argocd
+      - title: Kubernetes Namespace
+        url: https://backstage.dev.aztech-msdp.com/catalog/default/component/${{ parameters.name }}
+        icon: kubernetes
+      - title: Grafana Dashboard
+        url: https://grafana.dev.aztech-msdp.com/d/${{ parameters.name }}
+        icon: grafana

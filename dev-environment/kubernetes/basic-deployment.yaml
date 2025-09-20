@@ -1,0 +1,51 @@
+# Basic deployment for testing the development environment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-msdp
+  namespace: dev-santanu
+  labels:
+    app: hello-msdp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello-msdp
+  template:
+    metadata:
+      labels:
+        app: hello-msdp
+    spec:
+      containers:
+      - name: hello
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        env:
+        - name: ENVIRONMENT
+          value: "development"
+        - name: DEVELOPER
+          value: "santanu"
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-msdp-service
+  namespace: dev-santanu
+  labels:
+    app: hello-msdp
+spec:
+  selector:
+    app: hello-msdp
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+  type: ClusterIP

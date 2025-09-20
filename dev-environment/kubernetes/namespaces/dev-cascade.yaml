@@ -1,0 +1,100 @@
+# Development Namespace for Cascade AI Development
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dev-cascade
+  labels:
+    environment: development
+    owner: cascade
+    auto-shutdown: "true"
+    shutdown-time: "1800"
+    timezone: "GMT"
+---
+# Resource Quota for AI Development Environment
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: dev-cascade-quota
+  namespace: dev-cascade
+spec:
+  hard:
+    # CPU and Memory limits (smaller for AI experiments)
+    requests.cpu: "2"
+    requests.memory: 4Gi
+    limits.cpu: "4"
+    limits.memory: 8Gi
+    
+    # Storage limits
+    requests.storage: 20Gi
+    persistentvolumeclaims: "5"
+    
+    # Object limits
+    pods: "10"
+    services: "10"
+    secrets: "20"
+    configmaps: "15"
+    count/ingresses.networking.k8s.io: "3"
+---
+# Network Policy for AI Development Environment
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: dev-cascade-network-policy
+  namespace: dev-cascade
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: dev-cascade
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    - namespaceSelector:
+        matchLabels:
+          name: argocd
+  egress:
+  - {} # Allow all egress traffic for development
+---
+# Development Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dev-cascade-sa
+  namespace: dev-cascade
+---
+# Role for Development Operations
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: dev-cascade-role
+  namespace: dev-cascade
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps", "secrets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+# Role Binding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: dev-cascade-rolebinding
+  namespace: dev-cascade
+subjects:
+- kind: ServiceAccount
+  name: dev-cascade-sa
+  namespace: dev-cascade
+roleRef:
+  kind: Role
+  name: dev-cascade-role
+  apiGroup: rbac.authorization.k8s.io

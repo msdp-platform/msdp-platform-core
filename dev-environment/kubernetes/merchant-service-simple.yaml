@@ -1,0 +1,259 @@
+# VendaBuddy Merchant Service Deployment for Development
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: merchant-service-config
+  namespace: dev-santanu
+  labels:
+    app: merchant-service
+data:
+  NODE_ENV: "development"
+  PORT: "3002"
+  
+  # Service URLs
+  ADMIN_SERVICE_URL: "http://admin-service-simple:3005"
+  USER_SERVICE_URL: "http://user-service:3003"
+  ORDER_SERVICE_URL: "http://order-service:3006"
+  PAYMENT_SERVICE_URL: "http://payment-service:3007"
+  
+  # VendaBuddy specific configuration
+  BUSINESS_TYPES: "restaurant,street_food,retail,services"
+  SUPPORTED_COUNTRIES: "GB,US,IN,SG"
+  DEFAULT_CURRENCY: "GBP"
+
+---
+# VendaBuddy Merchant Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: merchant-service
+  namespace: dev-santanu
+  labels:
+    app: merchant-service
+    component: vendabuddy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: merchant-service
+  template:
+    metadata:
+      labels:
+        app: merchant-service
+        component: vendabuddy
+    spec:
+      containers:
+      - name: merchant-service
+        image: node:18-alpine
+        ports:
+        - containerPort: 3002
+        envFrom:
+        - configMapRef:
+            name: merchant-service-config
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 300m
+            memory: 256Mi
+        command: ["/bin/sh"]
+        args:
+        - -c
+        - |
+          echo "🏪 Starting VendaBuddy Merchant Service"
+          
+          # Create VendaBuddy Merchant Service
+          cat > server.js << 'EOF'
+          const http = require('http');
+          const url = require('url');
+          
+          const server = http.createServer((req, res) => {
+            const parsedUrl = url.parse(req.url, true);
+            
+            // Set CORS headers
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+            res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+            res.setHeader('Content-Type', 'application/json');
+            
+            if (req.method === 'OPTIONS') {
+              res.writeHead(200);
+              res.end();
+              return;
+            }
+            
+            if (parsedUrl.pathname === '/health') {
+              res.writeHead(200);
+              res.end(JSON.stringify({
+                status: 'healthy',
+                service: 'msdp-merchant-service',
+                version: '1.0.0-dev',
+                timestamp: new Date().toISOString(),
+                environment: process.env.NODE_ENV || 'development',
+                vendabuddy: {
+                  businessTypes: (process.env.BUSINESS_TYPES || '').split(','),
+                  supportedCountries: (process.env.SUPPORTED_COUNTRIES || '').split(','),
+                  defaultCurrency: process.env.DEFAULT_CURRENCY || 'GBP'
+                },
+                functions: {
+                  businessProfileManagement: true,
+                  menuCatalogManagement: true,
+                  orderProcessing: true,
+                  businessAnalytics: true,
+                  multiCountrySupport: true
+                }
+              }));
+            } else if (parsedUrl.pathname === '/') {
+              res.writeHead(200);
+              res.end(JSON.stringify({
+                service: 'VendaBuddy Merchant Service',
+                version: '1.0.0-dev',
+                description: 'Business Management Platform for Local Merchants',
+                tagline: 'Shopify for Local Businesses',
+                status: 'running',
+                endpoints: {
+                  health: '/health',
+                  merchants: '/api/merchants',
+                  menu: '/api/menu',
+                  orders: '/api/orders',
+                  analytics: '/api/analytics'
+                }
+              }));
+            } else if (parsedUrl.pathname.startsWith('/api/merchants/profile')) {
+              res.writeHead(200);
+              res.end(JSON.stringify({
+                message: 'Merchant Profile Management',
+                data: {
+                  id: 'merchant_001',
+                  businessName: 'Corner Café London',
+                  businessType: 'restaurant',
+                  country: 'GB',
+                  currency: 'GBP',
+                  status: 'active',
+                  onboardedBy: 'admin_santanu',
+                  features: {
+                    menuManagement: true,
+                    orderProcessing: true,
+                    paymentIntegration: true,
+                    analytics: true
+                  }
+                }
+              }));
+            } else if (parsedUrl.pathname.startsWith('/api/menu')) {
+              res.writeHead(200);
+              res.end(JSON.stringify({
+                message: 'Menu Management API',
+                data: [
+                  {
+                    id: 'item_001',
+                    name: 'Fish & Chips',
+                    category: 'Main Course',
+                    price: 12.50,
+                    currency: 'GBP',
+                    available: true,
+                    description: 'Traditional British fish and chips'
+                  },
+                  {
+                    id: 'item_002', 
+                    name: 'Chicken Tikka Masala',
+                    category: 'Main Course',
+                    price: 14.95,
+                    currency: 'GBP',
+                    available: true,
+                    description: 'Creamy chicken curry with rice'
+                  }
+                ]
+              }));
+            } else if (parsedUrl.pathname.startsWith('/api/orders')) {
+              res.writeHead(200);
+              res.end(JSON.stringify({
+                message: 'Order Management API',
+                data: [
+                  {
+                    id: 'order_001',
+                    customerId: 'customer_123',
+                    items: ['item_001', 'item_002'],
+                    total: 27.45,
+                    currency: 'GBP',
+                    status: 'confirmed',
+                    timestamp: new Date().toISOString(),
+                    deliveryType: 'pickup'
+                  }
+                ]
+              }));
+            } else if (parsedUrl.pathname.startsWith('/api/analytics')) {
+              res.writeHead(200);
+              res.end(JSON.stringify({
+                message: 'Business Analytics API',
+                data: {
+                  dailyRevenue: 245.50,
+                  ordersToday: 18,
+                  averageOrderValue: 13.64,
+                  popularItems: ['Fish & Chips', 'Chicken Tikka Masala'],
+                  currency: 'GBP',
+                  period: 'today'
+                }
+              }));
+            } else {
+              res.writeHead(404);
+              res.end(JSON.stringify({
+                error: 'Not Found',
+                message: `Route ${parsedUrl.pathname} not found`,
+                service: 'merchant-service'
+              }));
+            }
+          });
+          
+          const PORT = process.env.PORT || 3002;
+          server.listen(PORT, () => {
+            console.log(`🏪 VendaBuddy Merchant Service running on port ${PORT}`);
+            console.log(`📊 Health check: http://localhost:${PORT}/health`);
+            console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+            console.log(`💼 Business Types: ${process.env.BUSINESS_TYPES}`);
+            console.log(`🌎 Countries: ${process.env.SUPPORTED_COUNTRIES}`);
+          });
+          
+          // Graceful shutdown
+          process.on('SIGTERM', () => {
+            console.log('SIGTERM received, shutting down gracefully');
+            server.close(() => {
+              console.log('VendaBuddy Merchant Service shut down complete');
+              process.exit(0);
+            });
+          });
+          EOF
+          
+          echo "🏪 Starting VendaBuddy Merchant Service..."
+          node server.js
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3002
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3002
+          initialDelaySeconds: 5
+          periodSeconds: 10
+
+---
+# Merchant Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: merchant-service
+  namespace: dev-santanu
+  labels:
+    app: merchant-service
+    component: vendabuddy
+spec:
+  selector:
+    app: merchant-service
+  ports:
+  - port: 3002
+    targetPort: 3002
+    protocol: TCP
+  type: ClusterIP

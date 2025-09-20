@@ -1,0 +1,252 @@
+# MSDP Admin Service Deployment for Development Environment
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: admin-service-config
+  namespace: dev-santanu
+  labels:
+    app: admin-service
+    component: config
+data:
+  NODE_ENV: "development"
+  LOG_LEVEL: "debug"
+  PORT: "3005"
+  
+  # Service URLs (will be updated when other services are deployed)
+  API_GATEWAY_URL: "http://api-gateway-service:3000"
+  LOCATION_SERVICE_URL: "http://location-service:3001"
+  MERCHANT_SERVICE_URL: "http://merchant-service:3002"
+  USER_SERVICE_URL: "http://user-service:3003"
+  
+  # CORS Configuration
+  CORS_ORIGIN: "*"
+  
+  # Database Configuration (will be updated with Aurora Serverless)
+  DATABASE_HOST: "postgresql-service"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "msdp_admin_dev"
+  DATABASE_USER: "admin_user"
+  
+  # JWT Configuration
+  JWT_EXPIRES_IN: "24h"
+  
+  # Development flags
+  ENABLE_CORS: "true"
+  ENABLE_DEBUG: "true"
+
+---
+# Secret for sensitive data
+apiVersion: v1
+kind: Secret
+metadata:
+  name: admin-service-secrets
+  namespace: dev-santanu
+  labels:
+    app: admin-service
+    component: secrets
+type: Opaque
+stringData:
+  DATABASE_PASSWORD: "dev_password_change_in_production"
+  JWT_SECRET: "dev_jwt_secret_change_in_production"
+  ADMIN_API_KEY: "dev_admin_api_key_change_in_production"
+
+---
+# Admin Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin-service
+  namespace: dev-santanu
+  labels:
+    app: admin-service
+    component: backend
+    version: v1.0.0
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: admin-service
+  template:
+    metadata:
+      labels:
+        app: admin-service
+        component: backend
+        version: v1.0.0
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3005"
+        prometheus.io/path: "/health"
+    spec:
+      serviceAccountName: dev-santanu-sa
+      containers:
+      - name: admin-service
+        image: node:18-alpine
+        ports:
+        - containerPort: 3005
+          name: http
+          protocol: TCP
+        
+        # Environment variables from ConfigMap
+        envFrom:
+        - configMapRef:
+            name: admin-service-config
+        
+        # Environment variables from Secrets
+        env:
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: admin-service-secrets
+              key: DATABASE_PASSWORD
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: admin-service-secrets
+              key: JWT_SECRET
+        - name: ADMIN_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: admin-service-secrets
+              key: ADMIN_API_KEY
+        
+        # Resource limits
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        
+        # Health checks
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3005
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3005
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        
+        # Volume mounts for logs
+        volumeMounts:
+        - name: logs
+          mountPath: /app/logs
+        - name: app-source
+          mountPath: /app
+        
+        # Development: Install dependencies and start
+        command: ["/bin/sh"]
+        args:
+        - -c
+        - |
+          echo "🚀 Starting Admin Service in Development Mode"
+          
+          # Install dependencies if package.json exists
+          if [ -f "/app/package.json" ]; then
+            echo "📦 Installing dependencies..."
+            npm install
+          else
+            echo "⚠️ No package.json found, creating minimal setup..."
+            npm init -y
+            npm install express cors helmet morgan compression express-rate-limit winston dotenv joi jsonwebtoken bcryptjs axios node-cron
+          fi
+          
+          # Create logs directory
+          mkdir -p /app/logs
+          
+          # Start the service
+          echo "🎛️ Starting Admin Service..."
+          if [ -f "/app/src/server.js" ]; then
+            npm run dev
+          else
+            echo "⚠️ No server.js found, starting basic server..."
+            node -e "
+              const express = require('express');
+              const app = express();
+              app.get('/health', (req, res) => res.json({status: 'healthy', service: 'admin-service-dev'}));
+              app.get('/', (req, res) => res.json({service: 'MSDP Admin Service', status: 'development'}));
+              app.listen(3005, () => console.log('🎛️ Admin Service running on port 3005'));
+            "
+          fi
+      
+      # Volumes
+      volumes:
+      - name: logs
+        emptyDir: {}
+      - name: app-source
+        emptyDir: {}
+      
+      # Init container to copy source code (for development)
+      initContainers:
+      - name: source-copier
+        image: alpine/git:latest
+        command: ["/bin/sh"]
+        args:
+        - -c
+        - |
+          echo "📁 Setting up source code for development..."
+          # In a real setup, this would clone from git or copy from a volume
+          # For now, we'll create a minimal structure
+          mkdir -p /app/src /app/logs
+          echo "Source code setup complete"
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+        volumeMounts:
+        - name: app-source
+          mountPath: /app
+
+---
+# Admin Service Service (ClusterIP)
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin-service
+  namespace: dev-santanu
+  labels:
+    app: admin-service
+    component: service
+spec:
+  selector:
+    app: admin-service
+  ports:
+  - port: 3005
+    targetPort: 3005
+    protocol: TCP
+    name: http
+  type: ClusterIP
+
+---
+# Admin Service Service (NodePort for external access)
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin-service-external
+  namespace: dev-santanu
+  labels:
+    app: admin-service
+    component: external-service
+spec:
+  selector:
+    app: admin-service
+  ports:
+  - port: 3005
+    targetPort: 3005
+    nodePort: 30005
+    protocol: TCP
+    name: http
+  type: NodePort

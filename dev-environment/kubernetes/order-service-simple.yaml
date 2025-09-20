@@ -1,0 +1,251 @@
+# Order Service Deployment for Order Processing & Cart Management
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: order-service-config
+  namespace: dev-santanu
+  labels:
+    app: order-service
+data:
+  NODE_ENV: "development"
+  PORT: "3006"
+  
+  # Service URLs
+  USER_SERVICE_URL: "http://user-service:3003"
+  MERCHANT_SERVICE_URL: "http://merchant-service:3002"
+  PAYMENT_SERVICE_URL: "http://payment-service:3007"
+
+---
+# Order Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: dev-santanu
+  labels:
+    app: order-service
+    component: orders
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+        component: orders
+    spec:
+      containers:
+      - name: order-service
+        image: node:18-alpine
+        ports:
+        - containerPort: 3006
+        envFrom:
+        - configMapRef:
+            name: order-service-config
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 300m
+            memory: 256Mi
+        command: ["/bin/sh"]
+        args:
+        - -c
+        - |
+          echo "📦 Starting Order Service"
+          
+          # Create Order Service
+          cat > server.js << 'EOF'
+          const http = require('http');
+          const url = require('url');
+          
+          const server = http.createServer((req, res) => {
+            const parsedUrl = url.parse(req.url, true);
+            
+            // Set CORS headers
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+            res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+            res.setHeader('Content-Type', 'application/json');
+            
+            if (req.method === 'OPTIONS') {
+              res.writeHead(200);
+              res.end();
+              return;
+            }
+            
+            if (parsedUrl.pathname === '/health') {
+              res.writeHead(200);
+              res.end(JSON.stringify({
+                status: 'healthy',
+                service: 'msdp-order-service',
+                version: '1.0.0-dev',
+                timestamp: new Date().toISOString(),
+                environment: process.env.NODE_ENV || 'development',
+                functions: {
+                  cartManagement: true,
+                  orderProcessing: true,
+                  orderTracking: true,
+                  orderHistory: true,
+                  paymentIntegration: true
+                }
+              }));
+            } else if (parsedUrl.pathname === '/') {
+              res.writeHead(200);
+              res.end(JSON.stringify({
+                service: 'MSDP Order Service',
+                version: '1.0.0-dev',
+                description: 'Cart Management & Order Processing',
+                status: 'running',
+                endpoints: {
+                  health: '/health',
+                  orders: '/api/orders',
+                  cart: '/api/cart',
+                  tracking: '/api/orders/tracking'
+                }
+              }));
+            } else if (parsedUrl.pathname.startsWith('/api/orders') && req.method === 'GET') {
+              res.writeHead(200);
+              res.end(JSON.stringify({
+                message: 'Order Management',
+                data: [
+                  {
+                    id: 'order_001',
+                    customerId: 'user_123',
+                    merchantId: 'merchant_001',
+                    items: [
+                      {
+                        id: 'item_001',
+                        name: 'Fish & Chips',
+                        quantity: 1,
+                        price: 12.50,
+                        currency: 'GBP'
+                      },
+                      {
+                        id: 'item_002',
+                        name: 'Chicken Tikka Masala',
+                        quantity: 1,
+                        price: 14.95,
+                        currency: 'GBP'
+                      }
+                    ],
+                    subtotal: 27.45,
+                    tax: 5.49,
+                    total: 32.94,
+                    currency: 'GBP',
+                    status: 'confirmed',
+                    paymentStatus: 'paid',
+                    deliveryType: 'pickup',
+                    estimatedTime: '25 minutes',
+                    createdAt: new Date().toISOString()
+                  }
+                ]
+              }));
+            } else if (parsedUrl.pathname.startsWith('/api/orders') && req.method === 'POST') {
+              res.writeHead(201);
+              res.end(JSON.stringify({
+                success: true,
+                message: 'Order created successfully',
+                data: {
+                  id: 'order_' + Math.floor(Math.random() * 1000),
+                  status: 'pending',
+                  total: 32.94,
+                  currency: 'GBP',
+                  estimatedTime: '25 minutes'
+                }
+              }));
+            } else if (parsedUrl.pathname.startsWith('/api/cart')) {
+              res.writeHead(200);
+              res.end(JSON.stringify({
+                message: 'Shopping Cart',
+                data: {
+                  id: 'cart_123',
+                  customerId: 'user_123',
+                  items: [
+                    {
+                      id: 'item_001',
+                      name: 'Fish & Chips',
+                      quantity: 1,
+                      price: 12.50,
+                      currency: 'GBP'
+                    }
+                  ],
+                  subtotal: 12.50,
+                  itemCount: 1,
+                  currency: 'GBP'
+                }
+              }));
+            } else if (parsedUrl.pathname.startsWith('/api/orders/tracking')) {
+              res.writeHead(200);
+              res.end(JSON.stringify({
+                message: 'Order Tracking',
+                data: {
+                  orderId: 'order_001',
+                  status: 'preparing',
+                  timeline: [
+                    { status: 'confirmed', timestamp: new Date(Date.now() - 600000).toISOString() },
+                    { status: 'preparing', timestamp: new Date(Date.now() - 300000).toISOString() }
+                  ],
+                  estimatedCompletion: new Date(Date.now() + 900000).toISOString()
+                }
+              }));
+            } else {
+              res.writeHead(404);
+              res.end(JSON.stringify({
+                error: 'Not Found',
+                message: `Route ${parsedUrl.pathname} not found`,
+                service: 'order-service'
+              }));
+            }
+          });
+          
+          const PORT = process.env.PORT || 3006;
+          server.listen(PORT, () => {
+            console.log(`📦 Order Service running on port ${PORT}`);
+            console.log(`📊 Health check: http://localhost:${PORT}/health`);
+          });
+          
+          process.on('SIGTERM', () => {
+            console.log('SIGTERM received, shutting down gracefully');
+            server.close(() => {
+              console.log('Order Service shut down complete');
+              process.exit(0);
+            });
+          });
+          EOF
+          
+          echo "📦 Starting Order Service..."
+          node server.js
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3006
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3006
+          initialDelaySeconds: 5
+          periodSeconds: 10
+
+---
+# Order Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  namespace: dev-santanu
+  labels:
+    app: order-service
+spec:
+  selector:
+    app: order-service
+  ports:
+  - port: 3006
+    targetPort: 3006
+    protocol: TCP
+  type: ClusterIP

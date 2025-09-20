@@ -1,0 +1,264 @@
+# User Service Deployment for Authentication & User Management
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-service-config
+  namespace: dev-santanu
+  labels:
+    app: user-service
+data:
+  NODE_ENV: "development"
+  PORT: "3003"
+  
+  # JWT Configuration
+  JWT_EXPIRES_IN: "24h"
+  
+  # Service URLs
+  ADMIN_SERVICE_URL: "http://admin-service-simple:3005"
+  MERCHANT_SERVICE_URL: "http://merchant-service:3002"
+
+---
+# User Service Secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: user-service-secrets
+  namespace: dev-santanu
+  labels:
+    app: user-service
+type: Opaque
+stringData:
+  JWT_SECRET: "dev_jwt_secret_user_service_change_in_production"
+
+---
+# User Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+  namespace: dev-santanu
+  labels:
+    app: user-service
+    component: authentication
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+        component: authentication
+    spec:
+      containers:
+      - name: user-service
+        image: node:18-alpine
+        ports:
+        - containerPort: 3003
+        envFrom:
+        - configMapRef:
+            name: user-service-config
+        env:
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: user-service-secrets
+              key: JWT_SECRET
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 300m
+            memory: 256Mi
+        command: ["/bin/sh"]
+        args:
+        - -c
+        - |
+          echo "👤 Starting User Service"
+          
+          # Create User Service
+          cat > server.js << 'EOF'
+          const http = require('http');
+          const url = require('url');
+          const crypto = require('crypto');
+          
+          // Simple JWT implementation for development
+          function createJWT(payload) {
+            const header = Buffer.from(JSON.stringify({typ: 'JWT', alg: 'HS256'})).toString('base64url');
+            const payloadB64 = Buffer.from(JSON.stringify(payload)).toString('base64url');
+            const signature = crypto.createHmac('sha256', process.env.JWT_SECRET || 'dev-secret')
+              .update(`${header}.${payloadB64}`).digest('base64url');
+            return `${header}.${payloadB64}.${signature}`;
+          }
+          
+          const server = http.createServer((req, res) => {
+            const parsedUrl = url.parse(req.url, true);
+            
+            // Set CORS headers
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+            res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+            res.setHeader('Content-Type', 'application/json');
+            
+            if (req.method === 'OPTIONS') {
+              res.writeHead(200);
+              res.end();
+              return;
+            }
+            
+            if (parsedUrl.pathname === '/health') {
+              res.writeHead(200);
+              res.end(JSON.stringify({
+                status: 'healthy',
+                service: 'msdp-user-service',
+                version: '1.0.0-dev',
+                timestamp: new Date().toISOString(),
+                environment: process.env.NODE_ENV || 'development',
+                functions: {
+                  userAuthentication: true,
+                  jwtTokenManagement: true,
+                  userProfiles: true,
+                  sessionManagement: true,
+                  roleBasedAccess: true
+                }
+              }));
+            } else if (parsedUrl.pathname === '/') {
+              res.writeHead(200);
+              res.end(JSON.stringify({
+                service: 'MSDP User Service',
+                version: '1.0.0-dev',
+                description: 'Authentication & User Management',
+                status: 'running',
+                endpoints: {
+                  health: '/health',
+                  login: '/api/auth/login',
+                  register: '/api/auth/register',
+                  profile: '/api/users/profile',
+                  verify: '/api/auth/verify'
+                }
+              }));
+            } else if (parsedUrl.pathname === '/api/auth/login') {
+              // Mock login endpoint
+              const token = createJWT({
+                id: 'user_123',
+                email: 'demo@vendabuddy.com',
+                role: 'merchant',
+                iat: Math.floor(Date.now() / 1000),
+                exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60)
+              });
+              
+              res.writeHead(200);
+              res.end(JSON.stringify({
+                success: true,
+                message: 'Login successful',
+                data: {
+                  token: token,
+                  user: {
+                    id: 'user_123',
+                    email: 'demo@vendabuddy.com',
+                    name: 'Demo Merchant',
+                    role: 'merchant',
+                    businessId: 'merchant_001'
+                  }
+                }
+              }));
+            } else if (parsedUrl.pathname === '/api/auth/register') {
+              res.writeHead(200);
+              res.end(JSON.stringify({
+                success: true,
+                message: 'Registration successful',
+                data: {
+                  id: 'user_' + Math.floor(Math.random() * 1000),
+                  email: 'newuser@vendabuddy.com',
+                  status: 'pending_verification'
+                }
+              }));
+            } else if (parsedUrl.pathname === '/api/users/profile') {
+              res.writeHead(200);
+              res.end(JSON.stringify({
+                message: 'User Profile',
+                data: {
+                  id: 'user_123',
+                  email: 'demo@vendabuddy.com',
+                  name: 'Demo Merchant',
+                  role: 'merchant',
+                  businessId: 'merchant_001',
+                  country: 'GB',
+                  timezone: 'GMT',
+                  preferences: {
+                    currency: 'GBP',
+                    language: 'en',
+                    notifications: true
+                  }
+                }
+              }));
+            } else if (parsedUrl.pathname === '/api/auth/verify') {
+              res.writeHead(200);
+              res.end(JSON.stringify({
+                valid: true,
+                user: {
+                  id: 'user_123',
+                  email: 'demo@vendabuddy.com',
+                  role: 'merchant'
+                }
+              }));
+            } else {
+              res.writeHead(404);
+              res.end(JSON.stringify({
+                error: 'Not Found',
+                message: `Route ${parsedUrl.pathname} not found`,
+                service: 'user-service'
+              }));
+            }
+          });
+          
+          const PORT = process.env.PORT || 3003;
+          server.listen(PORT, () => {
+            console.log(`👤 User Service running on port ${PORT}`);
+            console.log(`📊 Health check: http://localhost:${PORT}/health`);
+            console.log(`🔐 JWT Secret configured: ${process.env.JWT_SECRET ? 'Yes' : 'No'}`);
+          });
+          
+          process.on('SIGTERM', () => {
+            console.log('SIGTERM received, shutting down gracefully');
+            server.close(() => {
+              console.log('User Service shut down complete');
+              process.exit(0);
+            });
+          });
+          EOF
+          
+          echo "👤 Starting User Service..."
+          node server.js
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3003
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3003
+          initialDelaySeconds: 5
+          periodSeconds: 10
+
+---
+# User Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+  namespace: dev-santanu
+  labels:
+    app: user-service
+spec:
+  selector:
+    app: user-service
+  ports:
+  - port: 3003
+    targetPort: 3003
+    protocol: TCP
+  type: ClusterIP

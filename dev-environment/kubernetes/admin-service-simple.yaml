@@ -1,0 +1,178 @@
+# Simplified Admin Service Deployment for Development
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: admin-service-simple-config
+  namespace: dev-santanu
+  labels:
+    app: admin-service-simple
+data:
+  NODE_ENV: "development"
+  PORT: "3005"
+
+---
+# Simple Admin Service Deployment using a basic Node.js setup
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin-service-simple
+  namespace: dev-santanu
+  labels:
+    app: admin-service-simple
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: admin-service-simple
+  template:
+    metadata:
+      labels:
+        app: admin-service-simple
+    spec:
+      containers:
+      - name: admin-service
+        image: node:18-alpine
+        ports:
+        - containerPort: 3005
+        envFrom:
+        - configMapRef:
+            name: admin-service-simple-config
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 300m
+            memory: 256Mi
+        command: ["/bin/sh"]
+        args:
+        - -c
+        - |
+          echo "🚀 Starting Simple Admin Service"
+          
+          # Create a simple Express server
+          cat > server.js << 'EOF'
+          const http = require('http');
+          const url = require('url');
+          
+          const server = http.createServer((req, res) => {
+            const parsedUrl = url.parse(req.url, true);
+            
+            // Set CORS headers
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+            res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+            res.setHeader('Content-Type', 'application/json');
+            
+            if (req.method === 'OPTIONS') {
+              res.writeHead(200);
+              res.end();
+              return;
+            }
+            
+            if (parsedUrl.pathname === '/health') {
+              res.writeHead(200);
+              res.end(JSON.stringify({
+                status: 'healthy',
+                service: 'msdp-admin-service',
+                version: '1.0.0-dev',
+                timestamp: new Date().toISOString(),
+                environment: process.env.NODE_ENV || 'development',
+                functions: {
+                  adminUserManagement: true,
+                  platformConfiguration: true,
+                  serviceOrchestration: true,
+                  auditLogging: true
+                }
+              }));
+            } else if (parsedUrl.pathname === '/') {
+              res.writeHead(200);
+              res.end(JSON.stringify({
+                service: 'MSDP Admin Service',
+                version: '1.0.0-dev',
+                description: 'Platform Management & Service Orchestration',
+                status: 'running',
+                endpoints: {
+                  health: '/health',
+                  adminUsers: '/api/admin/users',
+                  platform: '/api/admin/platform'
+                }
+              }));
+            } else if (parsedUrl.pathname.startsWith('/api/admin/users')) {
+              res.writeHead(200);
+              res.end(JSON.stringify({
+                message: 'Admin Users API',
+                data: [
+                  { id: 1, email: 'admin@msdp.com', role: 'super_admin' },
+                  { id: 2, email: 'santanu@msdp.com', role: 'admin' }
+                ]
+              }));
+            } else if (parsedUrl.pathname.startsWith('/api/admin/platform')) {
+              res.writeHead(200);
+              res.end(JSON.stringify({
+                message: 'Platform Management API',
+                services: {
+                  'merchant-service': { status: 'healthy', url: 'http://merchant-service:3002' },
+                  'user-service': { status: 'healthy', url: 'http://user-service:3003' },
+                  'order-service': { status: 'healthy', url: 'http://order-service:3006' }
+                }
+              }));
+            } else {
+              res.writeHead(404);
+              res.end(JSON.stringify({
+                error: 'Not Found',
+                message: `Route ${parsedUrl.pathname} not found`,
+                service: 'admin-service'
+              }));
+            }
+          });
+          
+          const PORT = process.env.PORT || 3005;
+          server.listen(PORT, () => {
+            console.log(`🎛️ Admin Service running on port ${PORT}`);
+            console.log(`📊 Health check: http://localhost:${PORT}/health`);
+            console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+          });
+          
+          // Graceful shutdown
+          process.on('SIGTERM', () => {
+            console.log('SIGTERM received, shutting down gracefully');
+            server.close(() => {
+              console.log('Admin Service shut down complete');
+              process.exit(0);
+            });
+          });
+          EOF
+          
+          echo "🎛️ Starting Admin Service..."
+          node server.js
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3005
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3005
+          initialDelaySeconds: 5
+          periodSeconds: 10
+
+---
+# Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin-service-simple
+  namespace: dev-santanu
+  labels:
+    app: admin-service-simple
+spec:
+  selector:
+    app: admin-service-simple
+  ports:
+  - port: 3005
+    targetPort: 3005
+    protocol: TCP
+  type: ClusterIP

@@ -1,0 +1,100 @@
+# Development Namespace for Santanu
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dev-santanu
+  labels:
+    environment: development
+    owner: santanu
+    auto-shutdown: "true"
+    shutdown-time: "1800"
+    timezone: "GMT"
+---
+# Resource Quota for Development Environment
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: dev-santanu-quota
+  namespace: dev-santanu
+spec:
+  hard:
+    # CPU and Memory limits
+    requests.cpu: "4"
+    requests.memory: 8Gi
+    limits.cpu: "6"
+    limits.memory: 12Gi
+    
+    # Storage limits
+    requests.storage: 50Gi
+    persistentvolumeclaims: "10"
+    
+    # Object limits
+    pods: "20"
+    services: "15"
+    secrets: "30"
+    configmaps: "20"
+    count/ingresses.networking.k8s.io: "5"
+---
+# Network Policy for Development Environment
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: dev-santanu-network-policy
+  namespace: dev-santanu
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: dev-santanu
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    - namespaceSelector:
+        matchLabels:
+          name: argocd
+  egress:
+  - {} # Allow all egress traffic for development
+---
+# Development Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dev-santanu-sa
+  namespace: dev-santanu
+---
+# Role for Development Operations
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: dev-santanu-role
+  namespace: dev-santanu
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps", "secrets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+# Role Binding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: dev-santanu-rolebinding
+  namespace: dev-santanu
+subjects:
+- kind: ServiceAccount
+  name: dev-santanu-sa
+  namespace: dev-santanu
+roleRef:
+  kind: Role
+  name: dev-santanu-role
+  apiGroup: rbac.authorization.k8s.io

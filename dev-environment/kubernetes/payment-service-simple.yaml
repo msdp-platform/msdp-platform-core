@@ -1,0 +1,266 @@
+# Payment Service Deployment for Payment Processing & Transactions
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payment-service-config
+  namespace: dev-santanu
+  labels:
+    app: payment-service
+data:
+  NODE_ENV: "development"
+  PORT: "3007"
+  
+  # Payment Configuration
+  PAYMENT_MODE: "sandbox"
+  SUPPORTED_CURRENCIES: "GBP,USD,INR,SGD"
+  
+  # Service URLs
+  ORDER_SERVICE_URL: "http://order-service:3006"
+  USER_SERVICE_URL: "http://user-service:3003"
+
+---
+# Payment Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: dev-santanu
+  labels:
+    app: payment-service
+    component: payments
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-service
+  template:
+    metadata:
+      labels:
+        app: payment-service
+        component: payments
+    spec:
+      containers:
+      - name: payment-service
+        image: node:18-alpine
+        ports:
+        - containerPort: 3007
+        envFrom:
+        - configMapRef:
+            name: payment-service-config
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 300m
+            memory: 256Mi
+        command: ["/bin/sh"]
+        args:
+        - -c
+        - |
+          echo "💳 Starting Payment Service"
+          
+          # Create Payment Service
+          cat > server.js << 'EOF'
+          const http = require('http');
+          const url = require('url');
+          
+          const server = http.createServer((req, res) => {
+            const parsedUrl = url.parse(req.url, true);
+            
+            // Set CORS headers
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+            res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+            res.setHeader('Content-Type', 'application/json');
+            
+            if (req.method === 'OPTIONS') {
+              res.writeHead(200);
+              res.end();
+              return;
+            }
+            
+            if (parsedUrl.pathname === '/health') {
+              res.writeHead(200);
+              res.end(JSON.stringify({
+                status: 'healthy',
+                service: 'msdp-payment-service',
+                version: '1.0.0-dev',
+                timestamp: new Date().toISOString(),
+                environment: process.env.NODE_ENV || 'development',
+                paymentConfig: {
+                  mode: process.env.PAYMENT_MODE || 'sandbox',
+                  supportedCurrencies: (process.env.SUPPORTED_CURRENCIES || '').split(',')
+                },
+                functions: {
+                  paymentProcessing: true,
+                  transactionTracking: true,
+                  payoutManagement: true,
+                  financialReporting: true,
+                  multiCurrencySupport: true
+                }
+              }));
+            } else if (parsedUrl.pathname === '/') {
+              res.writeHead(200);
+              res.end(JSON.stringify({
+                service: 'MSDP Payment Service',
+                version: '1.0.0-dev',
+                description: 'Payment Processing & Financial Transactions',
+                status: 'running',
+                mode: 'sandbox',
+                endpoints: {
+                  health: '/health',
+                  process: '/api/payments/process',
+                  transactions: '/api/payments/transactions',
+                  payouts: '/api/payments/payouts'
+                }
+              }));
+            } else if (parsedUrl.pathname === '/api/payments/process' && req.method === 'POST') {
+              // Mock payment processing
+              const transactionId = 'txn_' + Math.floor(Math.random() * 100000);
+              const amount = 32.94; // Mock amount
+              
+              res.writeHead(200);
+              res.end(JSON.stringify({
+                success: true,
+                message: 'Payment processed successfully',
+                data: {
+                  transactionId: transactionId,
+                  amount: amount,
+                  currency: 'GBP',
+                  status: 'completed',
+                  paymentMethod: 'card',
+                  processingFee: 0.99,
+                  netAmount: amount - 0.99,
+                  timestamp: new Date().toISOString(),
+                  merchantId: 'merchant_001'
+                }
+              }));
+            } else if (parsedUrl.pathname === '/api/payments/transactions') {
+              res.writeHead(200);
+              res.end(JSON.stringify({
+                message: 'Transaction History',
+                data: [
+                  {
+                    id: 'txn_12345',
+                    orderId: 'order_001',
+                    amount: 32.94,
+                    currency: 'GBP',
+                    status: 'completed',
+                    paymentMethod: 'card',
+                    processingFee: 0.99,
+                    netAmount: 31.95,
+                    timestamp: new Date().toISOString(),
+                    merchantId: 'merchant_001'
+                  },
+                  {
+                    id: 'txn_12344',
+                    orderId: 'order_002',
+                    amount: 18.50,
+                    currency: 'GBP',
+                    status: 'completed',
+                    paymentMethod: 'contactless',
+                    processingFee: 0.55,
+                    netAmount: 17.95,
+                    timestamp: new Date(Date.now() - 3600000).toISOString(),
+                    merchantId: 'merchant_001'
+                  }
+                ],
+                summary: {
+                  totalTransactions: 2,
+                  totalAmount: 51.44,
+                  totalFees: 1.54,
+                  netAmount: 49.90,
+                  currency: 'GBP'
+                }
+              }));
+            } else if (parsedUrl.pathname === '/api/payments/payouts') {
+              res.writeHead(200);
+              res.end(JSON.stringify({
+                message: 'Payout Management',
+                data: {
+                  pendingPayout: {
+                    amount: 245.50,
+                    currency: 'GBP',
+                    transactionCount: 18,
+                    fees: 7.37,
+                    netAmount: 238.13,
+                    scheduledDate: new Date(Date.now() + 86400000).toISOString()
+                  },
+                  lastPayout: {
+                    amount: 180.25,
+                    currency: 'GBP',
+                    paidDate: new Date(Date.now() - 604800000).toISOString(),
+                    status: 'completed'
+                  }
+                }
+              }));
+            } else if (parsedUrl.pathname === '/api/payments/methods') {
+              res.writeHead(200);
+              res.end(JSON.stringify({
+                message: 'Payment Methods',
+                data: {
+                  GB: ['card', 'contactless', 'bank_transfer'],
+                  US: ['card', 'ach', 'apple_pay', 'google_pay'],
+                  IN: ['upi', 'card', 'netbanking', 'wallet'],
+                  SG: ['card', 'paynow', 'grabpay']
+                }
+              }));
+            } else {
+              res.writeHead(404);
+              res.end(JSON.stringify({
+                error: 'Not Found',
+                message: `Route ${parsedUrl.pathname} not found`,
+                service: 'payment-service'
+              }));
+            }
+          });
+          
+          const PORT = process.env.PORT || 3007;
+          server.listen(PORT, () => {
+            console.log(`💳 Payment Service running on port ${PORT}`);
+            console.log(`📊 Health check: http://localhost:${PORT}/health`);
+            console.log(`💰 Payment mode: ${process.env.PAYMENT_MODE || 'sandbox'}`);
+          });
+          
+          process.on('SIGTERM', () => {
+            console.log('SIGTERM received, shutting down gracefully');
+            server.close(() => {
+              console.log('Payment Service shut down complete');
+              process.exit(0);
+            });
+          });
+          EOF
+          
+          echo "💳 Starting Payment Service..."
+          node server.js
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3007
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3007
+          initialDelaySeconds: 5
+          periodSeconds: 10
+
+---
+# Payment Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+  namespace: dev-santanu
+  labels:
+    app: payment-service
+spec:
+  selector:
+    app: payment-service
+  ports:
+  - port: 3007
+    targetPort: 3007
+    protocol: TCP
+  type: ClusterIP

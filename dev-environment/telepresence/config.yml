@@ -1,0 +1,141 @@
+# Telepresence Configuration for MSDP Development
+# This file configures Telepresence for optimal development experience
+
+# Global Telepresence settings
+telepresence:
+  version: v2
+  
+# Connection settings
+connection:
+  # Use existing AKS cluster
+  context: null  # Will use current kubectl context
+  
+  # Namespace-specific settings
+  namespaces:
+    dev-santanu:
+      intercepts:
+        # Backend Services for Kubernetes development
+        api-gateway:
+          port: 3000
+          local_port: 3000
+          env_file: .env.dev
+        admin-service:
+          port: 3005
+          local_port: 3005
+          env_file: .env.dev
+        merchant-service:
+          port: 3002
+          local_port: 3002
+          env_file: .env.dev
+        user-service:
+          port: 3003
+          local_port: 3003
+          env_file: .env.dev
+        order-service:
+          port: 3006
+          local_port: 3006
+          env_file: .env.dev
+        payment-service:
+          port: 3007
+          local_port: 3007
+          env_file: .env.dev
+    
+    dev-cascade:
+      intercepts:
+        # AI development focused services
+        merchant-service:
+          port: 3002
+          local_port: 3002
+          env_file: .env.dev
+        admin-service:
+          port: 3005
+          local_port: 3005
+          env_file: .env.dev
+
+# Traffic manager settings
+traffic_manager:
+  # Resource limits for traffic manager
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+# Intercept settings
+intercept:
+  # Default settings for all intercepts
+  default:
+    # Use local environment variables
+    use_local_env: true
+    
+    # Mount remote volumes locally
+    mount_remote_volumes: false
+    
+    # Docker settings for intercepts
+    docker:
+      # Use host networking for better performance
+      network: host
+      
+      # Mount source code for hot reloading
+      volumes:
+        - type: bind
+          source: ./services
+          target: /app/services
+          
+    # Environment variable handling
+    env:
+      # Exclude sensitive variables from intercept
+      exclude:
+        - AWS_ACCESS_KEY_ID
+        - AWS_SECRET_ACCESS_KEY
+        - JWT_SECRET
+        - DATABASE_PASSWORD
+      
+      # Override specific variables for local development
+      override:
+        NODE_ENV: development
+        LOG_LEVEL: debug
+        ENABLE_CORS: "true"
+
+# Logging configuration
+logging:
+  level: info
+  
+# Preview URL settings (for sharing development environments)
+preview:
+  # Enable preview URLs for sharing with team
+  enabled: true
+  
+  # Ingress configuration
+  ingress:
+    # Use existing nginx-ingress
+    class: nginx
+    
+    # TLS configuration
+    tls:
+      enabled: true
+      # Use existing cert-manager
+      cert_manager: true
+
+# Development workflow helpers
+workflow:
+  # Pre-intercept hooks
+  pre_intercept:
+    - name: check_services
+      command: kubectl get pods -n ${TELEPRESENCE_NAMESPACE}
+    - name: check_databases
+      command: ./dev-environment/scripts/check-db-connection.sh
+  
+  # Post-intercept hooks
+  post_intercept:
+    - name: show_info
+      command: echo "🎉 Intercept active! Code changes will be reflected immediately."
+    - name: open_browser
+      command: open http://localhost:4000  # Admin dashboard
+  
+  # Cleanup hooks
+  cleanup:
+    - name: stop_local_services
+      command: pkill -f "node.*src/server.js" || true

@@ -1,0 +1,101 @@
+# Staging Namespace for Business Partner Demos
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: staging-demo
+  labels:
+    environment: staging
+    purpose: demo
+    auto-shutdown: "false"  # Manual shutdown for demos
+---
+# Resource Quota for Staging Demo Environment
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: staging-demo-quota
+  namespace: staging-demo
+spec:
+  hard:
+    # Higher CPU and Memory for demo performance
+    requests.cpu: "8"
+    requests.memory: 16Gi
+    limits.cpu: "12"
+    limits.memory: 24Gi
+    
+    # Storage limits
+    requests.storage: 100Gi
+    persistentvolumeclaims: "15"
+    
+    # Object limits
+    pods: "30"
+    services: "20"
+    secrets: "40"
+    configmaps: "30"
+    count/ingresses.networking.k8s.io: "10"
+---
+# Network Policy for Staging Demo Environment
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: staging-demo-network-policy
+  namespace: staging-demo
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: staging-demo
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    - namespaceSelector:
+        matchLabels:
+          name: argocd
+    - namespaceSelector:
+        matchLabels:
+          name: nginx-ingress
+  egress:
+  - {} # Allow all egress traffic for staging
+---
+# Staging Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: staging-demo-sa
+  namespace: staging-demo
+---
+# Role for Staging Operations
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: staging-demo-role
+  namespace: staging-demo
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps", "secrets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets", "statefulsets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+# Role Binding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: staging-demo-rolebinding
+  namespace: staging-demo
+subjects:
+- kind: ServiceAccount
+  name: staging-demo-sa
+  namespace: staging-demo
+roleRef:
+  kind: Role
+  name: staging-demo-role
+  apiGroup: rbac.authorization.k8s.io

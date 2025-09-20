@@ -18,6 +18,11 @@ metadata:
   description: MSDP API Gateway - Central entry point for all MSDP services
   annotations:
     backstage.io/source-location: url:http://github.com/msdp-platform/msdp-platform-core/tree/dev/services/api-gateway
+    backstage.io/kubernetes-id: api-gateway
+    backstage.io/kubernetes-namespace: msdp-dev
+    argocd/app-name: api-gateway
+    github.com/project-slug: msdp-platform/msdp-platform-core
+    backstage.io/techdocs-ref: dir:.
   tags:
     - nodejs
     - gateway
@@ -29,7 +34,9 @@ spec:
   owner: platform-team
   system: msdp-platform
   providesApis:
-    - msdp-gateway-api
+    - api-gateway-api
+  dependsOn:
+    - resource:msdp-database
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
