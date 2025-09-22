@@ -45,7 +45,7 @@ app.use(compression());
 const allowedOrigins = [
   "http://localhost:4000", // Admin Dashboard
   "http://localhost:3000", // API Gateway
-  process.env.CORS_ORIGIN,
+  ...(process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim()) : []),
 ].filter(Boolean);
 
 app.use(
