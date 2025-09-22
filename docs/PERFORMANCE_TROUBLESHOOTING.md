@@ -45,7 +45,7 @@ killall "Windsurf"
 ### **Issue 3: Shared library dependencies breaking microservice independence**
 
 **Symptoms:**
-- Module not found errors: `@msdp/ui-components`
+- Module not found errors: `@msdp/shared-libs`
 - Build failures in Docker containers
 - Cross-repository dependencies
 
@@ -53,7 +53,7 @@ killall "Windsurf"
 Applications trying to import shared libraries that don't exist or aren't properly configured.
 
 **Solution:**
-- Remove all `@msdp/ui-components` imports
+- Remove all `@msdp/shared-libs` imports
 - Replace with self-contained components
 - Use direct API calls instead of shared service registries
 
