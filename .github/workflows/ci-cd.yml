@@ -106,7 +106,7 @@ jobs:
 
     strategy:
       matrix:
-        package: [ui-components, shared-libs, api-client]
+        package: [shared-libs, api-client]
 
     steps:
       - name: Checkout code
