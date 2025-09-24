@@ -61,6 +61,7 @@ spec:
     apiVersion: platform.msdp.com/v1alpha1
     kind: X3TierApp
   
+  mode: Resources
   resources:
   # Lambda Function
   - name: lambda-function
