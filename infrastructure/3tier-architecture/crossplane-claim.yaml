@@ -4,6 +4,8 @@ kind: TierApp
 metadata:
   name: user-service
   namespace: user-service
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
   labels:
     app: user-service
     tier: 3tier-architecture

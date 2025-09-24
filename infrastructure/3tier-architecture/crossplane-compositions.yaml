@@ -3,6 +3,8 @@ apiVersion: apiextensions.crossplane.io/v1
 kind: CompositeResourceDefinition
 metadata:
   name: x3tierapps.platform.msdp.com
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   group: platform.msdp.com
   names:
@@ -53,6 +55,8 @@ apiVersion: apiextensions.crossplane.io/v1
 kind: Composition
 metadata:
   name: 3tier-architecture
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
   labels:
     provider: aws
     service: 3tier-app
