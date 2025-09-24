@@ -1,0 +1,169 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: 3tier-architecture
+  labels:
+    provider: aws
+    service: 3tier-app
+spec:
+  compositeTypeRef:
+    apiVersion: platform.msdp.com/v1alpha1
+    kind: X3TierApp
+  
+  resources:
+  # Lambda Function
+  - name: lambda-function
+    base:
+      apiVersion: lambda.aws.upbound.io/v1beta1
+      kind: Function
+      spec:
+        forProvider:
+          region: eu-west-1
+          runtime: nodejs18.x
+          handler: index.handler
+          role: arn:aws:iam::319422413814:role/lambda-execution-role
+          filename: lambda-function.zip
+          sourceCodeHash: placeholder
+        providerConfigRef:
+          name: default
+    patches:
+    - type: FromCompositeFieldPath
+      fromFieldPath: metadata.name
+      toFieldPath: metadata.name
+      transforms:
+      - type: string
+        string:
+          fmt: "%s-lambda"
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.parameters.environment
+      toFieldPath: metadata.labels.environment
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.parameters.lambdaCode
+      toFieldPath: spec.forProvider.sourceCodeHash
+
+  # RDS Aurora Serverless
+  - name: rds-cluster
+    base:
+      apiVersion: rds.aws.upbound.io/v1beta1
+      kind: Cluster
+      spec:
+        forProvider:
+          region: eu-west-1
+          engine: aurora-postgresql
+          engineMode: provisioned
+          engineVersion: "15.4"
+          serverlessv2ScalingConfiguration:
+          - maxCapacity: 1
+            minCapacity: 0.5
+          masterUsername: postgres
+          manageMasterUserPassword: true
+          databaseName: userservice
+          skipFinalSnapshot: true
+        providerConfigRef:
+          name: default
+    patches:
+    - type: FromCompositeFieldPath
+      fromFieldPath: metadata.name
+      toFieldPath: metadata.name
+      transforms:
+      - type: string
+        string:
+          fmt: "%s-aurora"
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.parameters.environment
+      toFieldPath: metadata.labels.environment
+
+  # API Gateway
+  - name: api-gateway
+    base:
+      apiVersion: apigateway.aws.upbound.io/v1beta1
+      kind: RestAPI
+      spec:
+        forProvider:
+          region: eu-west-1
+          name: user-service-api
+          description: "3-tier architecture API Gateway"
+        providerConfigRef:
+          name: default
+    patches:
+    - type: FromCompositeFieldPath
+      fromFieldPath: metadata.name
+      toFieldPath: metadata.name
+      transforms:
+      - type: string
+        string:
+          fmt: "%s-api-gateway"
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.parameters.environment
+      toFieldPath: metadata.labels.environment
+
+  # S3 Bucket for Lambda Code
+  - name: s3-bucket
+    base:
+      apiVersion: s3.aws.upbound.io/v1beta1
+      kind: Bucket
+      spec:
+        forProvider:
+          region: eu-west-1
+        providerConfigRef:
+          name: default
+    patches:
+    - type: FromCompositeFieldPath
+      fromFieldPath: metadata.name
+      toFieldPath: metadata.name
+      transforms:
+      - type: string
+        string:
+          fmt: "%s-lambda-code"
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.parameters.environment
+      toFieldPath: metadata.labels.environment
+
+---
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: x3tierapps.platform.msdp.com
+spec:
+  group: platform.msdp.com
+  names:
+    kind: X3TierApp
+    plural: x3tierapps
+  versions:
+  - name: v1alpha1
+    served: true
+    referenceable: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              parameters:
+                type: object
+                properties:
+                  environment:
+                    type: string
+                    description: Environment (dev, staging, prod)
+                  lambdaCode:
+                    type: string
+                    description: Lambda source code hash
+                  region:
+                    type: string
+                    description: AWS region
+                    default: eu-west-1
+                required:
+                - environment
+            required:
+            - parameters
+          status:
+            type: object
+            properties:
+              conditions:
+                type: array
+                items:
+                  type: object
+  claimNames:
+    kind: TierApp
+    plural: tierapps

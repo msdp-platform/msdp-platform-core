@@ -1,0 +1,17 @@
+apiVersion: platform.msdp.com/v1alpha1
+kind: TierApp
+metadata:
+  name: user-service
+  namespace: user-service
+  labels:
+    app: user-service
+    tier: 3tier-architecture
+    environment: dev
+spec:
+  parameters:
+    environment: dev
+    lambdaCode: "placeholder-hash"
+    region: eu-west-1
+  compositionRef:
+    name: 3tier-architecture
+  writeConnectionSecretsToNamespace: user-service
