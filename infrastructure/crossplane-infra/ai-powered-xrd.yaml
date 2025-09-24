@@ -1,0 +1,106 @@
+# AI-Powered XRD for Natural Language Infrastructure
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xaiapps.platform.msdp.com
+  annotations:
+    crossplane.io/description: "AI-powered application infrastructure using natural language"
+spec:
+  group: platform.msdp.com
+  names:
+    kind: XAIApp
+    plural: xaiapps
+  versions:
+  - name: v1alpha1
+    served: true
+    referenceable: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              # Natural Language Configuration
+              prompt:
+                type: string
+                description: "Natural language description of desired infrastructure"
+                example: "Create a 3-tier web application with React frontend, Node.js API, and PostgreSQL database"
+              
+              # AI Provider Selection
+              aiProvider:
+                type: string
+                description: "AI provider to use for resource generation"
+                enum: ["openai", "claude", "auto"]
+                default: "auto"
+              
+              # Application Metadata
+              appName:
+                type: string
+                description: "Application name"
+                pattern: "^[a-z0-9-]+$"
+              
+              environment:
+                type: string
+                description: "Environment (dev, staging, prod)"
+                enum: ["dev", "staging", "prod"]
+                default: "dev"
+              
+              # Optional Technical Constraints
+              constraints:
+                type: object
+                description: "Technical constraints for AI to consider"
+                properties:
+                  region:
+                    type: string
+                    description: "AWS region"
+                    default: "eu-west-1"
+                  budget:
+                    type: string
+                    description: "Budget constraints"
+                    enum: ["low", "medium", "high"]
+                    default: "medium"
+                  performance:
+                    type: string
+                    description: "Performance requirements"
+                    enum: ["basic", "standard", "high"]
+                    default: "standard"
+                  security:
+                    type: string
+                    description: "Security level"
+                    enum: ["basic", "enhanced", "strict"]
+                    default: "enhanced"
+            
+            required:
+            - prompt
+            - appName
+          
+          status:
+            type: object
+            properties:
+              conditions:
+                type: array
+                items:
+                  type: object
+              aiGenerated:
+                type: object
+                description: "AI-generated insights and metadata"
+                properties:
+                  provider:
+                    type: string
+                    description: "AI provider used"
+                  resourcesCreated:
+                    type: integer
+                    description: "Number of resources created"
+                  estimatedCost:
+                    type: string
+                    description: "Estimated monthly cost"
+                  recommendations:
+                    type: array
+                    items:
+                      type: string
+                    description: "AI recommendations for optimization"
+  
+  claimNames:
+    kind: AIApp
+    plural: aiapps

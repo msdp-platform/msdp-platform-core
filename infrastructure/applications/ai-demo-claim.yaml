@@ -1,0 +1,60 @@
+# AI-Powered Infrastructure Claim - Natural Language Demo
+apiVersion: platform.msdp.com/v1alpha1
+kind: AIApp
+metadata:
+  name: ai-demo-ecommerce
+  namespace: user-service
+  labels:
+    app: ai-demo-ecommerce
+    ai-powered: "true"
+    demo: "natural-language-infrastructure"
+  annotations:
+    ai.crossplane.io/demo: "true"
+    ai.crossplane.io/description: "Demonstrates AI-powered infrastructure generation using natural language"
+spec:
+  # Natural Language Infrastructure Request
+  prompt: |
+    Create a modern e-commerce platform with the following requirements:
+    
+    FRONTEND:
+    - React-based web application with 3 replicas for high availability
+    - Should be accessible via HTTPS with proper SSL certificates
+    - Include a content delivery network for static assets
+    
+    BACKEND API:
+    - Node.js REST API with auto-scaling capabilities
+    - Should handle user authentication and product catalog
+    - Include rate limiting and security middleware
+    - Connect to the database for data persistence
+    
+    DATABASE:
+    - PostgreSQL database with automated backups
+    - Should be highly available with read replicas
+    - Include connection pooling for performance
+    - Encrypt data at rest and in transit
+    
+    ADDITIONAL REQUIREMENTS:
+    - All components should be monitored with health checks
+    - Include logging and observability features  
+    - Implement proper network security between tiers
+    - Optimize for cost while maintaining performance
+    - Include CI/CD friendly configurations
+  
+  # Application Configuration
+  appName: ai-demo-ecommerce
+  environment: dev
+  aiProvider: auto  # Let the system choose the best AI provider
+  
+  # Technical Constraints
+  constraints:
+    region: eu-west-1
+    budget: medium
+    performance: standard
+    security: enhanced
+  
+  # Composition Reference
+  compositionRef:
+    name: ai-powered-infrastructure
+  
+  # Connection Secrets
+  writeConnectionSecretsToNamespace: user-service

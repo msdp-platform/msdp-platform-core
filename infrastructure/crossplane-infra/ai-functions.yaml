@@ -1,0 +1,33 @@
+# AI-Powered Crossplane Functions - Infrastructure Layer
+apiVersion: pkg.crossplane.io/v1beta1
+kind: Function
+metadata:
+  name: function-openai
+  annotations:
+    ai.crossplane.io/provider: "openai"
+    ai.crossplane.io/version: "v0.3.0"
+spec:
+  package: xpkg.upbound.io/upbound/function-openai:v0.3.0
+
+---
+apiVersion: pkg.crossplane.io/v1beta1
+kind: Function
+metadata:
+  name: function-claude
+  annotations:
+    ai.crossplane.io/provider: "anthropic"
+    ai.crossplane.io/version: "v0.2.0"
+spec:
+  package: xpkg.upbound.io/upbound/function-claude:v0.2.0
+
+---
+# Keep existing function-go-templating for hybrid approach
+apiVersion: pkg.crossplane.io/v1beta1
+kind: Function
+metadata:
+  name: function-auto-ready
+  annotations:
+    ai.crossplane.io/provider: "crossplane-contrib"
+    ai.crossplane.io/version: "v0.2.1"
+spec:
+  package: xpkg.upbound.io/crossplane-contrib/function-auto-ready:v0.2.1
