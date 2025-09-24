@@ -1,0 +1,32 @@
+# Tier 2: Fixed Lambda Function for Production Infrastructure
+apiVersion: lambda.aws.upbound.io/v1beta1
+kind: Function
+metadata:
+  name: user-service-lambda-fixed
+  namespace: user-service
+  labels:
+    tier: api-logic
+    service: user-service
+spec:
+  forProvider:
+    region: eu-west-1
+    handler: index.handler
+    runtime: nodejs18.x
+    role: arn:aws:iam::319422413814:role/user-service-lambda-role
+    # Direct S3 reference (not using refs due to provider issues)
+    s3Bucket: lambda-code-bucket-msdp-2025-09-24-21-33
+    s3Key: user-service-lambda.zip
+    description: "User Service API Lambda Function - Production Core Infrastructure"
+    timeout: 30
+    memorySize: 512
+    environment:
+      - variables:
+          NODE_ENV: production
+          SERVICE_NAME: user-service
+          TIER: api-logic
+          DB_HOST: user-service-aurora.cluster-c3gu2eowyoja.eu-west-1.rds.amazonaws.com
+    tags:
+      Environment: production
+      Service: user-service
+      Tier: api-logic
+      Purpose: core-infrastructure

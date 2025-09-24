@@ -1,0 +1,115 @@
+# API Gateway - Missing Layer Between Frontend and Lambda
+apiVersion: apigateway.aws.upbound.io/v1beta1
+kind: RestAPI
+metadata:
+  name: user-service-api-gateway
+  namespace: user-service
+  labels:
+    tier: api-gateway
+    service: user-service
+spec:
+  forProvider:
+    region: eu-west-1
+    name: user-service-api
+    description: "User Service API Gateway - Production Core Infrastructure"
+    endpointConfiguration:
+      - types:
+        - REGIONAL
+    tags:
+      Environment: production
+      Service: user-service
+      Tier: api-gateway
+      Purpose: core-infrastructure
+---
+# API Gateway Resource for proxy integration
+apiVersion: apigateway.aws.upbound.io/v1beta1
+kind: Resource
+metadata:
+  name: user-service-api-resource
+  namespace: user-service
+  labels:
+    tier: api-gateway
+    service: user-service
+spec:
+  forProvider:
+    region: eu-west-1
+    restApiIdRef:
+      name: user-service-api-gateway
+    parentId: b8wda4kq2j  # Root resource ID from the REST API
+    pathPart: "{proxy+}"
+---
+# API Gateway Method
+apiVersion: apigateway.aws.upbound.io/v1beta1
+kind: Method
+metadata:
+  name: user-service-api-method
+  namespace: user-service
+  labels:
+    tier: api-gateway
+    service: user-service
+spec:
+  forProvider:
+    region: eu-west-1
+    restApiIdRef:
+      name: user-service-api-gateway
+    resourceIdRef:
+      name: user-service-api-resource
+    httpMethod: ANY
+    authorization: NONE
+---
+# API Gateway Integration with Lambda
+apiVersion: apigateway.aws.upbound.io/v1beta1
+kind: Integration
+metadata:
+  name: user-service-api-integration
+  namespace: user-service
+  labels:
+    tier: api-gateway
+    service: user-service
+spec:
+  forProvider:
+    region: eu-west-1
+    restApiIdRef:
+      name: user-service-api-gateway
+    resourceIdRef:
+      name: user-service-api-resource
+    httpMethod: ANY
+    integrationHttpMethod: POST
+    type: AWS_PROXY
+    uri: "arn:aws:apigateway:eu-west-1:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-1:319422413814:function:user-service-lambda-production/invocations"
+---
+# API Gateway Deployment
+apiVersion: apigateway.aws.upbound.io/v1beta1
+kind: Deployment
+metadata:
+  name: user-service-api-deployment
+  namespace: user-service
+  labels:
+    tier: api-gateway
+    service: user-service
+spec:
+  forProvider:
+    region: eu-west-1
+    restApiIdRef:
+      name: user-service-api-gateway
+    stageName: prod
+    description: "Production deployment of User Service API"
+---
+# Lambda Permission for API Gateway
+apiVersion: lambda.aws.upbound.io/v1beta1
+kind: Permission
+metadata:
+  name: user-service-lambda-apigateway-permission
+  namespace: user-service
+  labels:
+    tier: api-gateway
+    service: user-service
+spec:
+  forProvider:
+    region: eu-west-1
+    statementId: "AllowExecutionFromAPIGateway"
+    action: "lambda:InvokeFunction"
+    functionNameRef:
+      name: user-service-lambda-production
+    principal: "apigateway.amazonaws.com"
+    sourceArn: "arn:aws:execute-api:eu-west-1:319422413814:*/*/ANY/*"

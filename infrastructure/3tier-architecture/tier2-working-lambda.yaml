@@ -1,0 +1,63 @@
+# Tier 2: Working Lambda Function with correct Upbound schema
+apiVersion: lambda.aws.upbound.io/v1beta1
+kind: Function
+metadata:
+  name: user-service-lambda
+  namespace: user-service
+  labels:
+    tier: api-logic
+    service: user-service
+spec:
+  forProvider:
+    region: eu-west-1
+    handler: index.handler
+    runtime: nodejs18.x
+    roleRef:
+      name: user-service-lambda-role
+    # Using S3 deployment (required by Upbound provider)
+    s3Bucket: lambda-code-bucket-msdp-2025-09-24-21-33
+    s3Key: user-service-lambda.zip
+    sourceCodeHash: "placeholder-hash"
+    description: "User Service API Lambda Function"
+    timeout: 30
+    memorySize: 256
+    tags:
+      Environment: dev
+      Service: user-service
+      Tier: api-logic
+---
+# S3 Bucket for Lambda code (globally unique name)
+apiVersion: s3.aws.upbound.io/v1beta1
+kind: Bucket
+metadata:
+  name: lambda-code-bucket-msdp-2025-09-24-21-33
+  namespace: user-service
+  labels:
+    tier: storage
+    service: user-service
+spec:
+  forProvider:
+    region: eu-west-1
+    tags:
+      Environment: dev
+      Service: user-service
+      Purpose: lambda-code-storage
+---
+# S3 Bucket Object with Lambda code
+apiVersion: s3.aws.upbound.io/v1beta1
+kind: Object
+metadata:
+  name: user-service-lambda-code
+  namespace: user-service
+  labels:
+    tier: storage
+    service: user-service
+spec:
+  forProvider:
+    region: eu-west-1
+    bucketRef:
+      name: lambda-code-bucket-msdp-2025-09-24-21-33
+    key: user-service-lambda.zip
+    contentType: application/zip
+    # Base64 encoded zip file with simple Lambda function
+    contentBase64: UEsDBAoAAAAAAKxQV1kAAAAAAAAAAAAAAAAJAAAAaW5kZXguanNleHBvcnRzLmhhbmRsZXIgPSBhc3luYyAoZXZlbnQpID0+IHsKICByZXR1cm4gewogICAgc3RhdHVzQ29kZTogMjAwLAogICAgaGVhZGVyczogewogICAgICAnQ29udGVudC1UeXBlJzogJ2FwcGxpY2F0aW9uL2pzb24nLAogICAgICAnQWNjZXNzLUNvbnRyb2wtQWxsb3ctT3JpZ2luJzogJyonCiAgICB9LAogICAgYm9keTogSlNPTi5zdHJpbmdpZnkoewogICAgICBtZXNzYWdlOiAnSGVsbG8gZnJvbSBMYW1iZGEhJywKICAgICAgc2VydmljZTogJ3VzZXItc2VydmljZS1sYW1iZGEnLAogICAgICB0aWVyOiAnYXBpLWxvZ2ljJywKICAgICAgdGltZXN0YW1wOiBuZXcgRGF0ZSgpLnRvSVNPU3RyaW5nKCkKICAgIH0pCiAgfTsKfTtQSwECFAAKAAAAAACs
