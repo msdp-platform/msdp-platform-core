@@ -1,0 +1,36 @@
+# Fresh No-Touch Test - 3-Tier E-commerce Application (Claim)
+apiVersion: platform.msdp.com/v1alpha1
+kind: TierApp
+metadata:
+  name: fresh-test-ecommerce
+  labels:
+    app.kubernetes.io/name: fresh-test-ecommerce
+    app.kubernetes.io/component: 3tier-application
+    app.kubernetes.io/part-of: msdp-platform
+    environment: test
+    tier: full-stack
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    platform.msdp.com/description: "Fresh no-touch test of 3-tier architecture"
+    platform.msdp.com/test-type: "end-to-end"
+spec:
+  appName: fresh-test-ecommerce
+  environment: test
+  constraints:
+    region: eu-west-1
+    budget: low
+  frontend:
+    enabled: true
+    type: static-website
+  backend:
+    enabled: true
+    type: serverless
+    runtime: nodejs18.x
+    memory: 512
+    timeout: 30
+  database:
+    enabled: true
+    engine: postgres
+    version: "15.4"
+    instanceClass: db.t3.micro
+    allocatedStorage: 20
