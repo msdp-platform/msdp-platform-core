@@ -1,0 +1,106 @@
+# AWS Provider Configurations for Individual Service Providers
+# Each AWS service provider needs its own ProviderConfig
+---
+# Lambda Provider Configuration
+apiVersion: aws.m.upbound.io/v1beta1
+kind: ProviderConfig
+metadata:
+  name: default
+  namespace: crossplane-system
+  labels:
+    app.kubernetes.io/name: aws-lambda-provider-config
+    app.kubernetes.io/component: crossplane-provider-config
+    app.kubernetes.io/part-of: msdp-platform
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  credentials:
+    source: Secret
+    secretRef:
+      namespace: crossplane-system
+      name: aws-secret
+      key: creds
+
+---
+# RDS Provider Configuration  
+apiVersion: aws.m.upbound.io/v1beta1
+kind: ProviderConfig
+metadata:
+  name: default
+  namespace: crossplane-system
+  labels:
+    app.kubernetes.io/name: aws-rds-provider-config
+    app.kubernetes.io/component: crossplane-provider-config
+    app.kubernetes.io/part-of: msdp-platform
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  credentials:
+    source: Secret
+    secretRef:
+      namespace: crossplane-system
+      name: aws-secret
+      key: creds
+
+---
+# S3 Provider Configuration
+apiVersion: aws.m.upbound.io/v1beta1  
+kind: ProviderConfig
+metadata:
+  name: default
+  namespace: crossplane-system
+  labels:
+    app.kubernetes.io/name: aws-s3-provider-config
+    app.kubernetes.io/component: crossplane-provider-config
+    app.kubernetes.io/part-of: msdp-platform
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  credentials:
+    source: Secret
+    secretRef:
+      namespace: crossplane-system
+      name: aws-secret
+      key: creds
+
+---
+# API Gateway Provider Configuration
+apiVersion: aws.m.upbound.io/v1beta1
+kind: ProviderConfig
+metadata:
+  name: default
+  namespace: crossplane-system
+  labels:
+    app.kubernetes.io/name: aws-apigateway-provider-config
+    app.kubernetes.io/component: crossplane-provider-config
+    app.kubernetes.io/part-of: msdp-platform
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  credentials:
+    source: Secret
+    secretRef:
+      namespace: crossplane-system
+      name: aws-secret
+      key: creds
+
+---
+# IAM Provider Configuration (needed for Lambda roles)
+apiVersion: aws.m.upbound.io/v1beta1
+kind: ProviderConfig
+metadata:
+  name: default
+  namespace: crossplane-system
+  labels:
+    app.kubernetes.io/name: aws-iam-provider-config
+    app.kubernetes.io/component: crossplane-provider-config
+    app.kubernetes.io/part-of: msdp-platform
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  credentials:
+    source: Secret
+    secretRef:
+      namespace: crossplane-system
+      name: aws-secret
+      key: creds
