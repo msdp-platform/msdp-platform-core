@@ -88,19 +88,8 @@ spec:
               role: arn:aws:iam::319422413814:role/lambda-execution-role
               timeout: {{ .observed.composite.resource.spec.backend.timeout | default 30 }}
               memorySize: {{ .observed.composite.resource.spec.backend.memory | default 512 }}
-              code:
-                - zipFile: |
-                    exports.handler = async (event) => {
-                        return {
-                            statusCode: 200,
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                message: '{{ $appName }} API is working!',
-                                environment: '{{ $environment }}',
-                                timestamp: new Date().toISOString()
-                            })
-                        };
-                    };
+              s3Bucket: lambda-code-bucket-msdp-2025-09-24-21-33
+              s3Key: demo-lambda.zip
               tags:
                 Name: {{ $appName }}-api-{{ $environment }}
                 Environment: {{ $environment }}
