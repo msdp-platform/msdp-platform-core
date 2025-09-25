@@ -13,6 +13,7 @@ metadata:
     app.kubernetes.io/part-of: msdp-platform
   annotations:
     crossplane.io/description: "Complete 3-tier architecture with S3, Lambda, API Gateway, and RDS"
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   compositeTypeRef:
     apiVersion: platform.msdp.com/v1alpha1

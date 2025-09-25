@@ -12,6 +12,7 @@ metadata:
     msdp.platform/environment: dev
   annotations:
     platform.msdp.com/description: "Demo e-commerce application with 3-tier architecture"
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   # Application Configuration
   appName: demo-ecommerce

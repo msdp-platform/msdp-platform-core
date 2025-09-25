@@ -9,6 +9,8 @@ metadata:
     app.kubernetes.io/component: crossplane-xrd
     app.kubernetes.io/part-of: msdp-platform
     msdp.platform/architecture: 3tier
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
 spec:
   group: platform.msdp.com
   names:
