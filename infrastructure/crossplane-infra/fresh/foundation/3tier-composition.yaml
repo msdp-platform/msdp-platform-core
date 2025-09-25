@@ -58,10 +58,6 @@ spec:
             forProvider:
               region: {{ $region }}
               engine: {{ $engine }}
-              {{- $dbVersion := .observed.composite.resource.spec.database.version -}}
-              {{- if $dbVersion }}
-              engineVersion: "{{ $dbVersion }}"
-              {{- end }}
               instanceClass: {{ .observed.composite.resource.spec.database.instanceClass | default "db.t3.micro" }}
               allocatedStorage: {{ .observed.composite.resource.spec.database.allocatedStorage | default 20 }}
               dbName: {{ $appName | replace "-" "" }}{{ $environment }}

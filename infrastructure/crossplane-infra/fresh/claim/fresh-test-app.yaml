@@ -31,5 +31,6 @@ spec:
   database:
     enabled: true
     engine: postgresql
+    version: "16.4"
     instanceClass: db.t3.micro
     allocatedStorage: 20
