@@ -36,6 +36,7 @@ spec:
           {{ $environment := .observed.composite.resource.spec.environment }}
           {{ $region := .observed.composite.resource.spec.constraints.region | default "eu-west-1" }}
           {{ $budget := .observed.composite.resource.spec.constraints.budget | default "low" }}
+          {{ $bucketName := printf "%s-frontend-%s-%s" $appName $environment (randAlphaNum 8 | lower) }}
           
           # Tier 3: Database Layer (PostgreSQL RDS)
           {{ if .observed.composite.resource.spec.database.enabled }}
@@ -71,8 +72,49 @@ spec:
               name: default
           {{ end }}
           
-          # Tier 2: Backend Layer (API Gateway only for now)
+          # Tier 2: Backend Layer (Lambda Function + API Gateway)
           {{ if .observed.composite.resource.spec.backend.enabled }}
+          ---
+          apiVersion: lambda.aws.upbound.io/v1beta1
+          kind: Function
+          metadata:
+            name: {{ $appName }}-api-{{ $environment }}
+            annotations:
+              crossplane.io/external-name: {{ $appName }}-api-{{ $environment }}
+              gotemplating.fn.crossplane.io/composition-resource-name: {{ $appName }}-lambda
+          spec:
+            forProvider:
+              region: {{ $region }}
+              functionName: {{ $appName }}-api-{{ $environment }}
+              runtime: {{ .observed.composite.resource.spec.backend.runtime | default "nodejs18.x" }}
+              handler: index.handler
+              role: arn:aws:iam::319422413814:role/lambda-execution-role
+              timeout: {{ .observed.composite.resource.spec.backend.timeout | default 30 }}
+              memorySize: {{ .observed.composite.resource.spec.backend.memory | default 512 }}
+              code:
+                zipFile: |
+                  exports.handler = async (event) => {
+                      return {
+                          statusCode: 200,
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'Access-Control-Allow-Origin': '*'
+                          },
+                          body: JSON.stringify({
+                              message: 'Hello from {{ $appName }} API!',
+                              environment: '{{ $environment }}',
+                              timestamp: new Date().toISOString()
+                          })
+                      };
+                  };
+              tags:
+                Name: {{ $appName }}-api-{{ $environment }}
+                Environment: {{ $environment }}
+                Tier: backend
+                ManagedBy: crossplane
+            providerConfigRef:
+              name: default
+          
           ---
           apiVersion: apigateway.aws.upbound.io/v1beta1
           kind: RestAPI
@@ -106,7 +148,7 @@ spec:
           metadata:
             name: {{ $appName }}-frontend-{{ $environment }}
             annotations:
-              crossplane.io/external-name: {{ $appName }}-frontend-{{ $environment }}-{{ randAlphaNum 8 | lower }}
+              crossplane.io/external-name: {{ $bucketName }}
               gotemplating.fn.crossplane.io/composition-resource-name: {{ $appName }}-s3-bucket
           spec:
             forProvider:
@@ -129,7 +171,7 @@ spec:
           spec:
             forProvider:
               region: {{ $region }}
-              bucket: {{ $appName }}-frontend-{{ $environment }}-{{ randAlphaNum 8 | lower }}
+              bucket: {{ $bucketName }}
               indexDocument:
                 - suffix: index.html
               errorDocument:
@@ -147,7 +189,7 @@ spec:
           spec:
             forProvider:
               region: {{ $region }}
-              bucket: {{ $appName }}-frontend-{{ $environment }}-{{ randAlphaNum 8 | lower }}
+              bucket: {{ $bucketName }}
               key: index.html
               contentType: text/html
               content: |

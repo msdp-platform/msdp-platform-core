@@ -23,32 +23,18 @@ infrastructure/crossplane-infra/
 ├── demo-3tier-app.yaml         # Example application deployment
 └── README.md                   # This documentation
 ```
-
-## 🚀 Deployment Instructions
-
-### **1. Deploy via ArgoCD (Recommended)**
 ```bash
-# Apply the ArgoCD application
+# Deploy the ArgoCD application (requires permission)
 kubectl apply -f argocd-application.yaml
-
-# Check ArgoCD sync status
-argocd app get msdp-3tier-architecture
 ```
 
-### **2. Manual Deployment**
+### **Deploy Manually (Alternative)**
 ```bash
-# Apply XRD and Composition
+# 1. Deploy XRD and Composition (requires permission)
 kubectl apply -f 3tier-xrd.yaml
 kubectl apply -f 3tier-composition.yaml
 
-# Wait for resources to be ready
-kubectl get xrd x3tierapps.platform.msdp.com
-kubectl get composition 3tier-architecture
-```
-
-### **3. Create Application Instance**
-```bash
-# Deploy demo application
+# 2. Deploy demo application (requires permission)
 kubectl apply -f demo-3tier-app.yaml
 
 # Check application status
