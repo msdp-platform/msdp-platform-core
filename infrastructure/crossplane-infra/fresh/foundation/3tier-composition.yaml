@@ -40,6 +40,8 @@ spec:
           
           # Tier 3: Database Layer (PostgreSQL RDS)
           {{ if .observed.composite.resource.spec.database.enabled }}
+          {{- $engineInput := .observed.composite.resource.spec.database.engine | default "postgres" -}}
+          {{- $engine := (ternary "postgres" $engineInput (eq $engineInput "postgresql")) -}}
           ---
           apiVersion: rds.aws.upbound.io/v1beta1
           kind: Instance
@@ -51,7 +53,7 @@ spec:
           spec:
             forProvider:
               region: {{ $region }}
-              engine: {{ .observed.composite.resource.spec.database.engine | default "postgres" }}
+              engine: {{ $engine }}
               engineVersion: "{{ .observed.composite.resource.spec.database.version | default "15.4" }}"
               instanceClass: {{ .observed.composite.resource.spec.database.instanceClass | default "db.t3.micro" }}
               allocatedStorage: {{ .observed.composite.resource.spec.database.allocatedStorage | default 20 }}
