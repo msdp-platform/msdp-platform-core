@@ -85,28 +85,13 @@ spec:
           spec:
             forProvider:
               region: {{ $region }}
-              functionName: {{ $appName }}-api-{{ $environment }}
-              runtime: {{ .observed.composite.resource.spec.backend.runtime | default "nodejs18.x" }}
               handler: index.handler
+              runtime: {{ .observed.composite.resource.spec.backend.runtime | default "nodejs18.x" }}
               role: arn:aws:iam::319422413814:role/lambda-execution-role
               timeout: {{ .observed.composite.resource.spec.backend.timeout | default 30 }}
               memorySize: {{ .observed.composite.resource.spec.backend.memory | default 512 }}
-              code:
-                zipFile: |
-                  exports.handler = async (event) => {
-                      return {
-                          statusCode: 200,
-                          headers: {
-                              'Content-Type': 'application/json',
-                              'Access-Control-Allow-Origin': '*'
-                          },
-                          body: JSON.stringify({
-                              message: 'Hello from {{ $appName }} API!',
-                              environment: '{{ $environment }}',
-                              timestamp: new Date().toISOString()
-                          })
-                      };
-                  };
+              s3Bucket: msdp-lambda-code-bucket
+              s3Key: hello-world-function.zip
               tags:
                 Name: {{ $appName }}-api-{{ $environment }}
                 Environment: {{ $environment }}
