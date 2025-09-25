@@ -1,0 +1,201 @@
+# 3-Tier Architecture CompositeResourceDefinition
+# Defines the schema for 3-tier application infrastructure claims
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: x3tierapps.platform.msdp.com
+  labels:
+    app.kubernetes.io/name: 3tier-xrd
+    app.kubernetes.io/component: crossplane-xrd
+    app.kubernetes.io/part-of: msdp-platform
+    msdp.platform/architecture: 3tier
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  group: platform.msdp.com
+  names:
+    kind: X3TierApp
+    plural: x3tierapps
+  claimNames:
+    kind: TierApp
+    plural: tierapps
+  connectionSecretKeys:
+    - database-host
+    - database-port
+    - database-name
+    - database-username
+    - database-password
+    - api-gateway-url
+    - lambda-function-name
+  versions:
+  - name: v1alpha1
+    served: true
+    referenceable: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              # Application Configuration
+              appName:
+                type: string
+                description: "Name of the 3-tier application"
+              environment:
+                type: string
+                description: "Environment (dev, staging, prod)"
+                enum: ["dev", "staging", "prod"]
+                default: "dev"
+              
+              # Tier 1: Frontend Configuration
+              frontend:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+                    default: true
+                  type:
+                    type: string
+                    enum: ["static-website", "spa", "nextjs"]
+                    default: "static-website"
+                  domain:
+                    type: string
+                    description: "Custom domain for frontend"
+                
+              # Tier 2: API/Backend Configuration  
+              backend:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+                    default: true
+                  type:
+                    type: string
+                    enum: ["lambda", "ecs", "kubernetes"]
+                    default: "lambda"
+                  runtime:
+                    type: string
+                    enum: ["nodejs18.x", "python3.9", "java11", "dotnet6"]
+                    default: "nodejs18.x"
+                  memory:
+                    type: integer
+                    minimum: 128
+                    maximum: 10240
+                    default: 512
+                  timeout:
+                    type: integer
+                    minimum: 3
+                    maximum: 900
+                    default: 30
+                
+              # Tier 3: Database Configuration
+              database:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+                    default: true
+                  engine:
+                    type: string
+                    enum: ["postgresql", "mysql", "aurora-postgresql", "aurora-mysql"]
+                    default: "postgresql"
+                  version:
+                    type: string
+                    default: "15.4"
+                  instanceClass:
+                    type: string
+                    enum: ["db.t3.micro", "db.t3.small", "db.t3.medium", "db.r6g.large"]
+                    default: "db.t3.micro"
+                  allocatedStorage:
+                    type: integer
+                    minimum: 20
+                    maximum: 1000
+                    default: 20
+                  multiAZ:
+                    type: boolean
+                    default: false
+                  backupRetentionPeriod:
+                    type: integer
+                    minimum: 0
+                    maximum: 35
+                    default: 7
+                
+              # Infrastructure Constraints
+              constraints:
+                type: object
+                properties:
+                  region:
+                    type: string
+                    default: "eu-west-1"
+                  budget:
+                    type: string
+                    enum: ["low", "medium", "high"]
+                    default: "low"
+                  performance:
+                    type: string
+                    enum: ["basic", "standard", "premium"]
+                    default: "basic"
+                  security:
+                    type: string
+                    enum: ["basic", "enhanced", "enterprise"]
+                    default: "enhanced"
+                    
+            required:
+            - appName
+            - environment
+          status:
+            type: object
+            properties:
+              # Frontend Status
+              frontendStatus:
+                type: object
+                properties:
+                  ready:
+                    type: boolean
+                  url:
+                    type: string
+                  bucketName:
+                    type: string
+                    
+              # Backend Status  
+              backendStatus:
+                type: object
+                properties:
+                  ready:
+                    type: boolean
+                  functionName:
+                    type: string
+                  apiGatewayUrl:
+                    type: string
+                    
+              # Database Status
+              databaseStatus:
+                type: object
+                properties:
+                  ready:
+                    type: boolean
+                  endpoint:
+                    type: string
+                  port:
+                    type: integer
+                  databaseName:
+                    type: string
+                    
+              # Overall Status
+              conditions:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                    status:
+                      type: string
+                    reason:
+                      type: string
+                    message:
+                      type: string
+                    lastTransitionTime:
+                      type: string
+                      format: date-time

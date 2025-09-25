@@ -1,6 +1,6 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - ../3tier-xrd.yaml
-  - ../3tier-composition.yaml
-  - ../fresh-test-app.yaml
+  - 3tier-xrd.yaml
+  - 3tier-composition.yaml
+  - fresh-test-app.yaml
