@@ -58,7 +58,10 @@ spec:
             forProvider:
               region: {{ $region }}
               engine: {{ $engine }}
-              engineVersion: "{{ .observed.composite.resource.spec.database.version | default "15.4" }}"
+              {{- $dbVersion := .observed.composite.resource.spec.database.version -}}
+              {{- if $dbVersion }}
+              engineVersion: "{{ $dbVersion }}"
+              {{- end }}
               instanceClass: {{ .observed.composite.resource.spec.database.instanceClass | default "db.t3.micro" }}
               allocatedStorage: {{ .observed.composite.resource.spec.database.allocatedStorage | default 20 }}
               dbName: {{ $appName | replace "-" "" }}{{ $environment }}
@@ -149,6 +152,9 @@ spec:
               s3Key: lambda/index.zip
               roleRef:
                 name: {{ $appName }}-lambda-role-{{ $environment }}
+                policy:
+                  resolution: Required
+                  resolve: Always
               timeout: {{ .observed.composite.resource.spec.backend.timeout | default 30 }}
               memorySize: {{ .observed.composite.resource.spec.backend.memory | default 512 }}
               tags:
