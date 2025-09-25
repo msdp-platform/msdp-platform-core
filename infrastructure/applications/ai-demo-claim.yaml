@@ -40,13 +40,22 @@ spec:
     TIER 3 - DATABASE (AWS RDS Aurora Serverless v2):
     - Cluster Name: user-service-aurora-{environment}
     - Engine: aurora-postgresql
-    - Version: 15.4
-    - Scaling: 0.5-2 ACU (dev), 0.5-4 ACU (staging), 1-16 ACU (prod)
-    - Database: userservice
-    - Master Username: postgres (managed password)
+    - Engine Mode: provisioned (required for Serverless v2)
+    - Engine Version: 15.4
+    - Serverless v2 Scaling Configuration:
+      * Min Capacity: 0.5 ACU (dev), 0.5 ACU (staging), 1 ACU (prod)
+      * Max Capacity: 2 ACU (dev), 4 ACU (staging), 16 ACU (prod)
+      * Auto Pause: true (dev only, after 5 minutes)
+      * Scale to Zero: true (dev only)
+    - Database Name: userservice
+    - Master Username: postgres
+    - Manage Master User Password: true (AWS Secrets Manager)
     - Backup Retention: 7 days (dev), 14 days (staging), 30 days (prod)
-    - Encryption: AES-256 at rest
+    - Storage Encryption: true (AES-256)
     - Multi-AZ: false (dev), true (staging/prod)
+    - Performance Insights: enabled
+    - Monitoring Interval: 60 seconds
+    - Skip Final Snapshot: true (dev only)
     
     API GATEWAY (AWS):
     - Name: user-service-api-{environment}

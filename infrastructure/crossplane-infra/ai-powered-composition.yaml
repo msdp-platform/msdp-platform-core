@@ -45,7 +45,10 @@ spec:
         
         AWS RESOURCES:
         - Lambda Functions (lambda.aws.upbound.io/v1beta1)
-        - RDS Aurora Clusters (rds.aws.upbound.io/v1beta1)
+        - RDS Aurora Serverless v2 Clusters (rds.aws.upbound.io/v1beta1)
+          * Use engineMode: provisioned with serverlessv2ScalingConfiguration
+          * Support auto-pause and scale-to-zero for cost optimization
+          * ACU-based scaling (Aurora Capacity Units)
         - API Gateway REST APIs (apigateway.aws.upbound.io/v1beta1)
         - S3 Buckets (s3.aws.upbound.io/v1beta1)
         - EC2 Instances (ec2.aws.upbound.io/v1beta1)
@@ -103,7 +106,12 @@ spec:
         {{- if eq .observed.composite.resource.spec.cloudProvider "aws" }}
         - Use AWS resources (lambda.aws.upbound.io, rds.aws.upbound.io, etc.)
         - Follow AWS best practices and naming conventions
-        - Use AWS-specific features like Aurora Serverless, API Gateway
+        - For databases, use Aurora Serverless v2 with these specifications:
+          * engineMode: provisioned (required for Serverless v2)
+          * serverlessv2ScalingConfiguration with minCapacity and maxCapacity
+          * manageMasterUserPassword: true (use AWS Secrets Manager)
+          * Enable auto-pause for dev environments only
+          * Use ACU (Aurora Capacity Units) for scaling
         {{- else if eq .observed.composite.resource.spec.cloudProvider "azure" }}
         - Use Azure resources (web.azure.upbound.io, sql.azure.upbound.io, etc.)
         - Follow Azure best practices and naming conventions  
