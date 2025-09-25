@@ -40,6 +40,7 @@ spec:
           {{- $hash := sha256sum $uid -}}
           {{- $suffix := substr 0 8 $hash -}}
           {{- $bucketName := printf "%s-frontend-%s-%s" $appName $environment ($suffix | lower) -}}
+          {{- $codeBucketName := printf "%s-code-%s-%s" $appName $environment ($suffix | lower) -}}
           
           # Tier 3: Database Layer (PostgreSQL RDS)
           {{ if .observed.composite.resource.spec.database.enabled }}
@@ -136,15 +137,19 @@ spec:
             annotations:
               crossplane.io/external-name: {{ $appName }}-api-{{ $environment }}
               gotemplating.fn.crossplane.io/composition-resource-name: {{ $appName }}-lambda
+              crossplane.io/depends-on: '[{"apiVersion":"s3.aws.upbound.io/v1beta1","kind":"Object","name":"{{ $appName }}-lambda-zip-{{ $environment }}"}]'
           spec:
             forProvider:
               region: {{ $region }}
-              packageType: Image
+              runtime: nodejs18.x
+              handler: index.handler
+              s3BucketRef:
+                name: {{ $appName }}-code-{{ $environment }}
+              s3Key: lambda/index.zip
               roleRef:
                 name: {{ $appName }}-lambda-role-{{ $environment }}
               timeout: {{ .observed.composite.resource.spec.backend.timeout | default 30 }}
               memorySize: {{ .observed.composite.resource.spec.backend.memory | default 512 }}
-              imageUri: public.ecr.aws/lambda/nodejs:18
               tags:
                 Name: {{ $appName }}-api-{{ $environment }}
                 Environment: {{ $environment }}
@@ -198,6 +203,42 @@ spec:
                 ManagedBy: crossplane
             providerConfigRef:
               name: default
+
+          # Code Bucket for Lambda Zip
+          ---
+          apiVersion: s3.aws.upbound.io/v1beta1
+          kind: Bucket
+          metadata:
+            name: {{ $appName }}-code-{{ $environment }}
+            annotations:
+              crossplane.io/external-name: {{ $codeBucketName }}
+              gotemplating.fn.crossplane.io/composition-resource-name: {{ $appName }}-code-bucket
+          spec:
+            forProvider:
+              region: {{ $region }}
+              tags:
+                Name: {{ $appName }}-code-{{ $environment }}
+                Environment: {{ $environment }}
+                Tier: backend
+                ManagedBy: crossplane
+            providerConfigRef:
+              name: default
+
+          # Lambda Zip (hello world) uploaded to the Code Bucket
+          ---
+          apiVersion: s3.aws.upbound.io/v1beta1
+          kind: Object
+          metadata:
+            name: {{ $appName }}-lambda-zip-{{ $environment }}
+            annotations:
+              gotemplating.fn.crossplane.io/composition-resource-name: {{ $appName }}-lambda-zip
+          spec:
+            forProvider:
+              region: {{ $region }}
+              bucketRef:
+                name: {{ $appName }}-code-{{ $environment }}
+              key: lambda/index.zip
+              contentBase64: UEsDBBQAAAAIAAm9OVuVMwdndgAAAH4AAAAIABwAaW5kZXguanNVVAkAA9LE1WjSxNVodXgLAAEE9QEAAAQAAAAADcrNCoJAFAbQvU/x7VQIkZaGbdqERC16grG5mjA/ce81GgbfPeEsD/0+kVWatwnWEaOHkRReqOhLQWv0Z+QCYNKVAzJEja5yiZY6HNv2gDHa1GF4Pu6NKC9hXqZUZXgSMfOeyis5FzFx9LgZP1pTYquxnYrdH1BLAQIeAxQAAAAIAAm9OVuVMwdndgAAAH4AAAAIABgAAAAAAAEAAACkgQAAAABpbmRleC5qc1VUBQAD0sTVaHV4CwABBPUBAAAEAAAAAFBLBQYAAAAAAQABAE4AAAC4AAAAAAA=
           
           ---
           apiVersion: s3.aws.upbound.io/v1beta1
