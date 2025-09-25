@@ -1,6 +1,6 @@
 # 3-Tier Architecture CompositeResourceDefinition
 # Defines the schema for 3-tier application infrastructure claims
-apiVersion: apiextensions.crossplane.io/v1
+apiVersion: apiextensions.crossplane.io/v2
 kind: CompositeResourceDefinition
 metadata:
   name: x3tierapps.platform.msdp.com
