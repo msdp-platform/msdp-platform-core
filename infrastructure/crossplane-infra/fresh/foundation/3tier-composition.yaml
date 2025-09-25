@@ -141,6 +141,7 @@ spec:
           spec:
             forProvider:
               region: {{ $region }}
+              packageType: Zip
               runtime: nodejs18.x
               handler: index.handler
               s3BucketRef:
@@ -238,6 +239,7 @@ spec:
               bucketRef:
                 name: {{ $appName }}-code-{{ $environment }}
               key: lambda/index.zip
+              contentType: application/zip
               contentBase64: UEsDBBQAAAAIAAm9OVuVMwdndgAAAH4AAAAIABwAaW5kZXguanNVVAkAA9LE1WjSxNVodXgLAAEE9QEAAAQAAAAADcrNCoJAFAbQvU/x7VQIkZaGbdqERC16grG5mjA/ce81GgbfPeEsD/0+kVWatwnWEaOHkRReqOhLQWv0Z+QCYNKVAzJEja5yiZY6HNv2gDHa1GF4Pu6NKC9hXqZUZXgSMfOeyis5FzFx9LgZP1pTYquxnYrdH1BLAQIeAxQAAAAIAAm9OVuVMwdndgAAAH4AAAAIABgAAAAAAAEAAACkgQAAAABpbmRleC5qc1VUBQAD0sTVaHV4CwABBPUBAAAEAAAAAFBLBQYAAAAAAQABAE4AAAC4AAAAAAA=
           
           ---
