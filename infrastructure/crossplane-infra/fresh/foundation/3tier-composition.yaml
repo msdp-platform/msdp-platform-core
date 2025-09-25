@@ -139,6 +139,7 @@ spec:
           spec:
             forProvider:
               region: {{ $region }}
+              packageType: Image
               roleRef:
                 name: {{ $appName }}-lambda-role-{{ $environment }}
               timeout: {{ .observed.composite.resource.spec.backend.timeout | default 30 }}
