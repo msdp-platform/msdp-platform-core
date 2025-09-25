@@ -34,6 +34,13 @@ spec:
                 enum: ["openai", "claude", "auto"]
                 default: "auto"
               
+              # Cloud Provider Selection
+              cloudProvider:
+                type: string
+                description: "Cloud provider for infrastructure deployment"
+                enum: ["aws", "azure", "multi-cloud"]
+                default: "aws"
+              
               # Application Metadata
               appName:
                 type: string

@@ -1,49 +1,86 @@
-# AI-Powered Infrastructure Claim - Natural Language Demo
+# AI-Powered 3-Tier User Service Infrastructure
 apiVersion: platform.msdp.com/v1alpha1
 kind: AIApp
 metadata:
-  name: ai-demo-ecommerce
+  name: user-service-3tier
   namespace: user-service
   labels:
-    app: ai-demo-ecommerce
+    app: user-service
+    tier: 3tier-architecture
     ai-powered: "true"
-    demo: "natural-language-infrastructure"
+    msdp.platform/service: user-service
   annotations:
-    ai.crossplane.io/demo: "true"
-    ai.crossplane.io/description: "Demonstrates AI-powered infrastructure generation using natural language"
+    ai.crossplane.io/architecture: "3-tier"
+    ai.crossplane.io/description: "AI-powered 3-tier user service infrastructure"
 spec:
-  # Natural Language Infrastructure Request
+  # Precise Infrastructure Specification
   prompt: |
-    Create a modern e-commerce platform with the following requirements:
+    Create a production-ready 3-tier user service architecture with these EXACT specifications:
     
-    FRONTEND:
-    - React-based web application with 3 replicas for high availability
-    - Should be accessible via HTTPS with proper SSL certificates
-    - Include a content delivery network for static assets
+    TIER 1 - FRONTEND (Kubernetes on AKS):
+    - Deployment: user-service-frontend
+    - Replicas: 2 (dev), 3 (staging), 5 (prod)
+    - Container: nginx serving React build
+    - Service: user-service-frontend (ClusterIP, port 80)
+    - Ingress: user-service-frontend.dev.aztech-msdp.com
+    - SSL: Let's Encrypt certificate via cert-manager
     
-    BACKEND API:
-    - Node.js REST API with auto-scaling capabilities
-    - Should handle user authentication and product catalog
-    - Include rate limiting and security middleware
-    - Connect to the database for data persistence
+    TIER 2 - API LAYER (AWS Lambda):
+    - Function Name: user-service-lambda-{environment}
+    - Runtime: nodejs18.x
+    - Memory: 256MB (dev), 512MB (staging), 1024MB (prod)
+    - Timeout: 30s (dev), 60s (staging/prod)
+    - Environment Variables:
+      * NODE_ENV: {environment}
+      * DB_HOST: {rds-endpoint}
+      * REDIS_URL: {redis-endpoint}
+    - IAM Role: user-service-lambda-execution-role
+    - VPC: Deploy in private subnets with NAT Gateway access
     
-    DATABASE:
-    - PostgreSQL database with automated backups
-    - Should be highly available with read replicas
-    - Include connection pooling for performance
-    - Encrypt data at rest and in transit
+    TIER 3 - DATABASE (AWS RDS Aurora Serverless v2):
+    - Cluster Name: user-service-aurora-{environment}
+    - Engine: aurora-postgresql
+    - Version: 15.4
+    - Scaling: 0.5-2 ACU (dev), 0.5-4 ACU (staging), 1-16 ACU (prod)
+    - Database: userservice
+    - Master Username: postgres (managed password)
+    - Backup Retention: 7 days (dev), 14 days (staging), 30 days (prod)
+    - Encryption: AES-256 at rest
+    - Multi-AZ: false (dev), true (staging/prod)
     
-    ADDITIONAL REQUIREMENTS:
-    - All components should be monitored with health checks
-    - Include logging and observability features  
-    - Implement proper network security between tiers
-    - Optimize for cost while maintaining performance
-    - Include CI/CD friendly configurations
+    API GATEWAY (AWS):
+    - Name: user-service-api-{environment}
+    - Type: REST API
+    - Stage: {environment}
+    - Custom Domain: api-user-service.dev.aztech-msdp.com
+    - SSL Certificate: ACM certificate
+    - Integration: Lambda Proxy Integration
+    - CORS: Enabled for frontend domain
+    - Rate Limiting: 1000 req/min (dev), 5000 req/min (staging/prod)
+    
+    NAMING CONVENTIONS:
+    - All AWS resources: user-service-{resource-type}-{environment}
+    - All K8s resources: user-service-{component}
+    - Tags: Environment={environment}, Service=user-service, ManagedBy=crossplane-ai
+    - Labels: app=user-service, tier={tier-number}, environment={environment}
+    
+    SECURITY REQUIREMENTS:
+    - RDS: Private subnets only, security group allowing Lambda access
+    - Lambda: VPC deployment, security group for RDS access
+    - API Gateway: API key required, throttling enabled
+    - Frontend: HTTPS only, security headers
+    
+    MONITORING:
+    - CloudWatch Logs: All Lambda functions
+    - CloudWatch Metrics: Custom metrics for API performance
+    - RDS Performance Insights: Enabled
+    - Application Load Balancer: Access logs to S3
   
   # Application Configuration
-  appName: ai-demo-ecommerce
+  appName: user-service
   environment: dev
-  aiProvider: auto  # Let the system choose the best AI provider
+  aiProvider: openai  # Use OpenAI for precise infrastructure generation
+  cloudProvider: aws  # AWS for backend, AKS for frontend
   
   # Technical Constraints
   constraints:

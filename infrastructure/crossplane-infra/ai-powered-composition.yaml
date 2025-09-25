@@ -25,8 +25,14 @@ spec:
       apiVersion: openai.fn.upbound.io/v1alpha1
       kind: Prompt
       systemPrompt: |
-        You are an expert cloud infrastructure architect specializing in AWS and Kubernetes.
-        Your task is to generate production-ready infrastructure based on natural language descriptions.
+        You are an expert cloud infrastructure architect specializing in hybrid cloud architectures.
+        Your task is to generate production-ready infrastructure based on precise specifications.
+        
+        MSDP PLATFORM ARCHITECTURE:
+        - Frontend: Always deploy to Azure Kubernetes Service (AKS)
+        - Backend APIs: Deploy to specified cloud provider (AWS Lambda, Azure Functions)
+        - Databases: Deploy to specified cloud provider (AWS RDS, Azure SQL)
+        - Networking: Cross-cloud connectivity via VPN/ExpressRoute
         
         IMPORTANT GUIDELINES:
         1. Always create secure, scalable, and cost-effective infrastructure
@@ -35,12 +41,26 @@ spec:
         4. Consider the specified environment, budget, and performance constraints
         5. Generate resources that work together as a cohesive system
         
-        AVAILABLE AWS RESOURCES:
+        AVAILABLE CLOUD RESOURCES:
+        
+        AWS RESOURCES:
         - Lambda Functions (lambda.aws.upbound.io/v1beta1)
         - RDS Aurora Clusters (rds.aws.upbound.io/v1beta1)
         - API Gateway REST APIs (apigateway.aws.upbound.io/v1beta1)
         - S3 Buckets (s3.aws.upbound.io/v1beta1)
-        - Kubernetes Deployments, Services, Ingress
+        - EC2 Instances (ec2.aws.upbound.io/v1beta1)
+        - EKS Clusters (eks.aws.upbound.io/v1beta1)
+        
+        AZURE RESOURCES:
+        - Azure Functions (web.azure.upbound.io/v1beta1)
+        - Azure SQL Databases (sql.azure.upbound.io/v1beta1)
+        - Azure Container Apps (containerapp.azure.upbound.io/v1beta1)
+        - Azure Storage Accounts (storage.azure.upbound.io/v1beta1)
+        - Azure Virtual Machines (compute.azure.upbound.io/v1beta1)
+        - Azure Kubernetes Service (containerservice.azure.upbound.io/v1beta1)
+        
+        KUBERNETES RESOURCES (Cloud-agnostic):
+        - Deployments, Services, Ingress, ConfigMaps, Secrets
         
         RESOURCE REQUIREMENTS:
         - All resources must include upbound.io/name annotation
@@ -55,6 +75,7 @@ spec:
         APPLICATION DETAILS:
         - Name: {{ .observed.composite.resource.spec.appName }}
         - Environment: {{ .observed.composite.resource.spec.environment }}
+        - Cloud Provider: {{ .observed.composite.resource.spec.cloudProvider }}
         - Region: {{ .observed.composite.resource.spec.constraints.region }}
         - Budget: {{ .observed.composite.resource.spec.constraints.budget }}
         - Performance: {{ .observed.composite.resource.spec.constraints.performance }}
@@ -78,7 +99,22 @@ spec:
         - Include backup and disaster recovery
         {{- end }}
         
-        Generate all necessary AWS and Kubernetes resources to fulfill this request.
+        CLOUD PROVIDER INSTRUCTIONS:
+        {{- if eq .observed.composite.resource.spec.cloudProvider "aws" }}
+        - Use AWS resources (lambda.aws.upbound.io, rds.aws.upbound.io, etc.)
+        - Follow AWS best practices and naming conventions
+        - Use AWS-specific features like Aurora Serverless, API Gateway
+        {{- else if eq .observed.composite.resource.spec.cloudProvider "azure" }}
+        - Use Azure resources (web.azure.upbound.io, sql.azure.upbound.io, etc.)
+        - Follow Azure best practices and naming conventions  
+        - Use Azure-specific features like Container Apps, Azure SQL
+        {{- else if eq .observed.composite.resource.spec.cloudProvider "multi-cloud" }}
+        - Use a mix of AWS and Azure resources for redundancy
+        - Ensure cross-cloud compatibility and data synchronization
+        - Consider network connectivity between clouds
+        {{- end }}
+        
+        Generate all necessary cloud and Kubernetes resources to fulfill this request.
         
       credentials:
       - name: openai
