@@ -36,7 +36,10 @@ spec:
           {{ $environment := .observed.composite.resource.spec.environment }}
           {{ $region := .observed.composite.resource.spec.constraints.region | default "eu-west-1" }}
           {{ $budget := .observed.composite.resource.spec.constraints.budget | default "low" }}
-          {{ $bucketName := printf "%s-frontend-%s-%s" $appName $environment (randAlphaNum 8 | lower) }}
+          {{- $uid := .observed.composite.resource.metadata.uid -}}
+          {{- $hash := sha256sum $uid -}}
+          {{- $suffix := substr 0 8 $hash -}}
+          {{- $bucketName := printf "%s-frontend-%s-%s" $appName $environment ($suffix | lower) -}}
           
           # Tier 3: Database Layer (PostgreSQL RDS)
           {{ if .observed.composite.resource.spec.database.enabled }}
