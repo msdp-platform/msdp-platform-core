@@ -71,34 +71,8 @@ spec:
               name: default
           {{ end }}
           
-          # Tier 2: Backend Layer (Lambda Function)
+          # Tier 2: Backend Layer (API Gateway only for now)
           {{ if .observed.composite.resource.spec.backend.enabled }}
-          ---
-          apiVersion: lambda.aws.upbound.io/v1beta1
-          kind: Function
-          metadata:
-            name: {{ $appName }}-api-{{ $environment }}
-            annotations:
-              crossplane.io/external-name: {{ $appName }}-api-{{ $environment }}
-              gotemplating.fn.crossplane.io/composition-resource-name: {{ $appName }}-lambda
-          spec:
-            forProvider:
-              region: {{ $region }}
-              runtime: {{ .observed.composite.resource.spec.backend.runtime | default "nodejs18.x" }}
-              handler: index.handler
-              role: arn:aws:iam::319422413814:role/lambda-execution-role
-              timeout: {{ .observed.composite.resource.spec.backend.timeout | default 30 }}
-              memorySize: {{ .observed.composite.resource.spec.backend.memory | default 512 }}
-              filename: /tmp/lambda-placeholder.zip
-              sourceCodeHash: "placeholder-hash"
-              tags:
-                Name: {{ $appName }}-api-{{ $environment }}
-                Environment: {{ $environment }}
-                Tier: backend
-                ManagedBy: crossplane
-            providerConfigRef:
-              name: default
-          
           ---
           apiVersion: apigateway.aws.upbound.io/v1beta1
           kind: RestAPI
