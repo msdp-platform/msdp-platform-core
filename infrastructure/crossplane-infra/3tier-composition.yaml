@@ -45,22 +45,17 @@ spec:
             name: {{ $appName }}-db-{{ $environment }}
             annotations:
               crossplane.io/external-name: {{ $appName }}-db-{{ $environment }}
+              gotemplating.fn.crossplane.io/composition-resource-name: {{ $appName }}-database
           spec:
             forProvider:
               region: {{ $region }}
               engine: {{ .observed.composite.resource.spec.database.engine | default "postgres" }}
-              engineVersion: {{ .observed.composite.resource.spec.database.version | default "15.4" }}
+              engineVersion: "{{ .observed.composite.resource.spec.database.version | default "15.4" }}"
               instanceClass: {{ .observed.composite.resource.spec.database.instanceClass | default "db.t3.micro" }}
               allocatedStorage: {{ .observed.composite.resource.spec.database.allocatedStorage | default 20 }}
               dbName: {{ $appName | replace "-" "" }}{{ $environment }}
               username: {{ $appName | replace "-" "" }}admin
-              passwordSecretRef:
-                name: {{ $appName }}-db-password
-                key: password
-                namespace: crossplane-system
-              vpcSecurityGroupIds:
-                - {{ $appName }}-db-sg-{{ $environment }}
-              dbSubnetGroupName: {{ $appName }}-db-subnet-group-{{ $environment }}
+              password: "TempPassword123!"
               multiAz: {{ .observed.composite.resource.spec.database.multiAZ | default false }}
               backupRetentionPeriod: {{ .observed.composite.resource.spec.database.backupRetentionPeriod | default 7 }}
               storageEncrypted: true
@@ -73,9 +68,6 @@ spec:
                 ManagedBy: crossplane
             providerConfigRef:
               name: default
-            writeConnectionSecretsToRef:
-              name: {{ $appName }}-db-connection
-              namespace: crossplane-system
           {{ end }}
           
           # Tier 2: Backend Layer (Lambda Function)
@@ -87,48 +79,16 @@ spec:
             name: {{ $appName }}-api-{{ $environment }}
             annotations:
               crossplane.io/external-name: {{ $appName }}-api-{{ $environment }}
+              gotemplating.fn.crossplane.io/composition-resource-name: {{ $appName }}-lambda
           spec:
             forProvider:
               region: {{ $region }}
-              functionName: {{ $appName }}-api-{{ $environment }}
               runtime: {{ .observed.composite.resource.spec.backend.runtime | default "nodejs18.x" }}
               handler: index.handler
               role: arn:aws:iam::319422413814:role/lambda-execution-role
               timeout: {{ .observed.composite.resource.spec.backend.timeout | default 30 }}
               memorySize: {{ .observed.composite.resource.spec.backend.memory | default 512 }}
-              code:
-                zipFile: |
-                  const AWS = require('aws-sdk');
-                  
-                  // {{ $appName }} API - {{ $environment }} environment
-                  exports.handler = async (event) => {
-                      console.log('{{ $appName }} API request:', JSON.stringify(event, null, 2));
-                      
-                      const response = {
-                          statusCode: 200,
-                          headers: {
-                              'Content-Type': 'application/json',
-                              'Access-Control-Allow-Origin': '*',
-                              'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-                              'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-                          },
-                          body: JSON.stringify({
-                              message: '{{ $appName }} API is working!',
-                              environment: '{{ $environment }}',
-                              timestamp: new Date().toISOString(),
-                              path: event.path || '/',
-                              method: event.httpMethod || 'GET',
-                              tier: 'backend-api'
-                          })
-                      };
-                      
-                      return response;
-                  };
-              environment:
-                variables:
-                  APP_NAME: {{ $appName }}
-                  ENVIRONMENT: {{ $environment }}
-                  TIER: backend
+              filename: lambda.zip
               tags:
                 Name: {{ $appName }}-api-{{ $environment }}
                 Environment: {{ $environment }}
@@ -144,6 +104,7 @@ spec:
             name: {{ $appName }}-gateway-{{ $environment }}
             annotations:
               crossplane.io/external-name: {{ $appName }}-gateway-{{ $environment }}
+              gotemplating.fn.crossplane.io/composition-resource-name: {{ $appName }}-api-gateway
           spec:
             forProvider:
               region: {{ $region }}
@@ -170,6 +131,7 @@ spec:
             name: {{ $appName }}-frontend-{{ $environment }}
             annotations:
               crossplane.io/external-name: {{ $appName }}-frontend-{{ $environment }}-{{ randAlphaNum 8 | lower }}
+              gotemplating.fn.crossplane.io/composition-resource-name: {{ $appName }}-s3-bucket
           spec:
             forProvider:
               region: {{ $region }}
@@ -186,6 +148,8 @@ spec:
           kind: BucketWebsiteConfiguration
           metadata:
             name: {{ $appName }}-website-config-{{ $environment }}
+            annotations:
+              gotemplating.fn.crossplane.io/composition-resource-name: {{ $appName }}-website-config
           spec:
             forProvider:
               region: {{ $region }}
@@ -202,6 +166,8 @@ spec:
           kind: Object
           metadata:
             name: {{ $appName }}-index-html-{{ $environment }}
+            annotations:
+              gotemplating.fn.crossplane.io/composition-resource-name: {{ $appName }}-index-html
           spec:
             forProvider:
               region: {{ $region }}

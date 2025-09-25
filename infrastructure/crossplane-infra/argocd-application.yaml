@@ -19,7 +19,7 @@ spec:
   
   source:
     repoURL: https://github.com/msdp-platform/msdp-platform-core.git
-    targetRevision: main
+    targetRevision: dev
     path: infrastructure/crossplane-infra
     
   destination:
