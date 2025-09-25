@@ -34,7 +34,8 @@ spec:
       - CreateNamespace=false  # crossplane-system already exists
       - PrunePropagationPolicy=foreground
       - PruneLast=true
-      - ApplyOutOfSyncOnly=true
+      - RespectIgnoreDifferences=true  # Enable proper sync wave handling
+      - ServerSideApply=true           # Better for CRDs
     retry:
       limit: 5
       backoff:
