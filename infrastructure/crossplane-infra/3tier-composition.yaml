@@ -85,13 +85,10 @@ spec:
           spec:
             forProvider:
               region: {{ $region }}
-              handler: index.handler
-              runtime: {{ .observed.composite.resource.spec.backend.runtime | default "nodejs18.x" }}
               role: arn:aws:iam::319422413814:role/lambda-execution-role
               timeout: {{ .observed.composite.resource.spec.backend.timeout | default 30 }}
               memorySize: {{ .observed.composite.resource.spec.backend.memory | default 512 }}
-              s3Bucket: msdp-lambda-code-bucket
-              s3Key: hello-world-function.zip
+              imageUri: public.ecr.aws/lambda/nodejs:18
               tags:
                 Name: {{ $appName }}-api-{{ $environment }}
                 Environment: {{ $environment }}
