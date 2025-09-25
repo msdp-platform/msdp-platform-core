@@ -15,7 +15,7 @@ metadata:
     platform.msdp.com/test-type: "end-to-end"
 spec:
   appName: fresh-test-ecommerce
-  environment: test
+  environment: dev
   constraints:
     region: eu-west-1
     budget: low
@@ -24,13 +24,13 @@ spec:
     type: static-website
   backend:
     enabled: true
-    type: serverless
+    type: lambda
     runtime: nodejs18.x
     memory: 512
     timeout: 30
   database:
     enabled: true
-    engine: postgres
+    engine: postgresql
     version: "15.4"
     instanceClass: db.t3.micro
     allocatedStorage: 20
