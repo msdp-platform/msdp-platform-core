@@ -1,0 +1,46 @@
+# ArgoCD Application for AI-Powered Crossplane Infrastructure
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: msdp-ai-infrastructure
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/description: "AI-powered infrastructure using Crossplane with OpenAI and Claude functions"
+spec:
+  project: default
+  
+  source:
+    repoURL: https://github.com/msdp-platform/msdp-platform-core.git
+    targetRevision: HEAD
+    path: infrastructure/crossplane-infra
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: crossplane-system
+  
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+    - CreateNamespace=true
+    - PrunePropagationPolicy=foreground
+    - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  
+  # Health checks for Crossplane resources
+  ignoreDifferences:
+  - group: apiextensions.crossplane.io
+    kind: CompositeResourceDefinition
+    jsonPointers:
+    - /status
+  - group: apiextensions.crossplane.io
+    kind: Composition
+    jsonPointers:
+    - /status
