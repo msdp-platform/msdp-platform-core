@@ -1,6 +1,6 @@
 # 3-Tier Architecture Composition using Go Templating
 # Orchestrates frontend (S3), backend (Lambda + API Gateway), and database (RDS)
-apiVersion: apiextensions.crossplane.io/v2
+apiVersion: apiextensions.crossplane.io/v1
 kind: Composition
 metadata:
   name: 3tier-architecture
