@@ -1,3 +1,24 @@
+# Runtime Configuration for AI Functions with API Keys
+apiVersion: pkg.crossplane.io/v1beta1
+kind: DeploymentRuntimeConfig
+metadata:
+  name: ai-functions-runtime-config
+spec:
+  deploymentTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: package-runtime
+            envFrom:
+            - secretRef:
+                name: gpt  # OpenAI secret
+                optional: true
+            - secretRef:
+                name: claude  # Claude secret  
+                optional: true
+
+---
 # AI-Powered Crossplane Functions - Infrastructure Layer
 apiVersion: pkg.crossplane.io/v1beta1
 kind: Function
@@ -6,8 +27,11 @@ metadata:
   annotations:
     ai.crossplane.io/provider: "openai"
     ai.crossplane.io/version: "v0.3.0"
+    ai.crossplane.io/description: "OpenAI GPT-powered infrastructure generation with custom API key"
 spec:
   package: xpkg.upbound.io/upbound/function-openai:v0.3.0
+  runtimeConfigRef:
+    name: ai-functions-runtime-config
 
 ---
 apiVersion: pkg.crossplane.io/v1beta1
@@ -17,8 +41,11 @@ metadata:
   annotations:
     ai.crossplane.io/provider: "anthropic"
     ai.crossplane.io/version: "v0.2.0"
+    ai.crossplane.io/description: "Anthropic Claude-powered infrastructure generation with custom API key"
 spec:
   package: xpkg.upbound.io/upbound/function-claude:v0.2.0
+  runtimeConfigRef:
+    name: ai-functions-runtime-config
 
 ---
 # Keep existing function-go-templating for hybrid approach
