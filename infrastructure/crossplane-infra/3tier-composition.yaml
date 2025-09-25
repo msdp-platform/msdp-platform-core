@@ -1,0 +1,274 @@
+# 3-Tier Architecture Composition using Go Templating
+# Orchestrates frontend (S3), backend (Lambda + API Gateway), and database (RDS)
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: 3tier-architecture
+  labels:
+    provider: aws
+    service: 3tier-app
+    architecture: 3tier
+    app.kubernetes.io/name: 3tier-composition
+    app.kubernetes.io/component: crossplane-composition
+    app.kubernetes.io/part-of: msdp-platform
+  annotations:
+    crossplane.io/description: "Complete 3-tier architecture with S3, Lambda, API Gateway, and RDS"
+spec:
+  compositeTypeRef:
+    apiVersion: platform.msdp.com/v1alpha1
+    kind: X3TierApp
+  
+  mode: Pipeline
+  pipeline:
+  
+  # Step 1: Generate infrastructure using Go templating
+  - step: generate-infrastructure
+    functionRef:
+      name: function-go-templating
+    input:
+      apiVersion: gotemplating.fn.crossplane.io/v1beta1
+      kind: GoTemplate
+      source: Inline
+      inline:
+        template: |
+          {{ $appName := .observed.composite.resource.spec.appName }}
+          {{ $environment := .observed.composite.resource.spec.environment }}
+          {{ $region := .observed.composite.resource.spec.constraints.region | default "eu-west-1" }}
+          {{ $budget := .observed.composite.resource.spec.constraints.budget | default "low" }}
+          
+          # Tier 3: Database Layer (PostgreSQL RDS)
+          {{ if .observed.composite.resource.spec.database.enabled }}
+          ---
+          apiVersion: rds.aws.upbound.io/v1beta1
+          kind: Instance
+          metadata:
+            name: {{ $appName }}-db-{{ $environment }}
+            annotations:
+              crossplane.io/external-name: {{ $appName }}-db-{{ $environment }}
+          spec:
+            forProvider:
+              region: {{ $region }}
+              engine: {{ .observed.composite.resource.spec.database.engine | default "postgres" }}
+              engineVersion: {{ .observed.composite.resource.spec.database.version | default "15.4" }}
+              instanceClass: {{ .observed.composite.resource.spec.database.instanceClass | default "db.t3.micro" }}
+              allocatedStorage: {{ .observed.composite.resource.spec.database.allocatedStorage | default 20 }}
+              dbName: {{ $appName | replace "-" "" }}{{ $environment }}
+              username: {{ $appName | replace "-" "" }}admin
+              passwordSecretRef:
+                name: {{ $appName }}-db-password
+                key: password
+                namespace: crossplane-system
+              vpcSecurityGroupIds:
+                - {{ $appName }}-db-sg-{{ $environment }}
+              dbSubnetGroupName: {{ $appName }}-db-subnet-group-{{ $environment }}
+              multiAz: {{ .observed.composite.resource.spec.database.multiAZ | default false }}
+              backupRetentionPeriod: {{ .observed.composite.resource.spec.database.backupRetentionPeriod | default 7 }}
+              storageEncrypted: true
+              deletionProtection: {{ if eq $environment "prod" }}true{{ else }}false{{ end }}
+              skipFinalSnapshot: {{ if eq $environment "prod" }}false{{ else }}true{{ end }}
+              tags:
+                Name: {{ $appName }}-database-{{ $environment }}
+                Environment: {{ $environment }}
+                Tier: database
+                ManagedBy: crossplane
+            providerConfigRef:
+              name: default
+            writeConnectionSecretsToRef:
+              name: {{ $appName }}-db-connection
+              namespace: crossplane-system
+          {{ end }}
+          
+          # Tier 2: Backend Layer (Lambda Function)
+          {{ if .observed.composite.resource.spec.backend.enabled }}
+          ---
+          apiVersion: lambda.aws.upbound.io/v1beta1
+          kind: Function
+          metadata:
+            name: {{ $appName }}-api-{{ $environment }}
+            annotations:
+              crossplane.io/external-name: {{ $appName }}-api-{{ $environment }}
+          spec:
+            forProvider:
+              region: {{ $region }}
+              functionName: {{ $appName }}-api-{{ $environment }}
+              runtime: {{ .observed.composite.resource.spec.backend.runtime | default "nodejs18.x" }}
+              handler: index.handler
+              role: arn:aws:iam::319422413814:role/lambda-execution-role
+              timeout: {{ .observed.composite.resource.spec.backend.timeout | default 30 }}
+              memorySize: {{ .observed.composite.resource.spec.backend.memory | default 512 }}
+              code:
+                zipFile: |
+                  const AWS = require('aws-sdk');
+                  
+                  // {{ $appName }} API - {{ $environment }} environment
+                  exports.handler = async (event) => {
+                      console.log('{{ $appName }} API request:', JSON.stringify(event, null, 2));
+                      
+                      const response = {
+                          statusCode: 200,
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'Access-Control-Allow-Origin': '*',
+                              'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                              'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+                          },
+                          body: JSON.stringify({
+                              message: '{{ $appName }} API is working!',
+                              environment: '{{ $environment }}',
+                              timestamp: new Date().toISOString(),
+                              path: event.path || '/',
+                              method: event.httpMethod || 'GET',
+                              tier: 'backend-api'
+                          })
+                      };
+                      
+                      return response;
+                  };
+              environment:
+                variables:
+                  APP_NAME: {{ $appName }}
+                  ENVIRONMENT: {{ $environment }}
+                  TIER: backend
+              tags:
+                Name: {{ $appName }}-api-{{ $environment }}
+                Environment: {{ $environment }}
+                Tier: backend
+                ManagedBy: crossplane
+            providerConfigRef:
+              name: default
+          
+          ---
+          apiVersion: apigateway.aws.upbound.io/v1beta1
+          kind: RestAPI
+          metadata:
+            name: {{ $appName }}-gateway-{{ $environment }}
+            annotations:
+              crossplane.io/external-name: {{ $appName }}-gateway-{{ $environment }}
+          spec:
+            forProvider:
+              region: {{ $region }}
+              name: {{ $appName }}-gateway-{{ $environment }}
+              description: API Gateway for {{ $appName }} {{ $environment }} environment
+              endpointConfiguration:
+                - types: 
+                  - REGIONAL
+              tags:
+                Name: {{ $appName }}-gateway-{{ $environment }}
+                Environment: {{ $environment }}
+                Tier: backend
+                ManagedBy: crossplane
+            providerConfigRef:
+              name: default
+          {{ end }}
+          
+          # Tier 1: Frontend Layer (S3 Static Website)
+          {{ if .observed.composite.resource.spec.frontend.enabled }}
+          ---
+          apiVersion: s3.aws.upbound.io/v1beta1
+          kind: Bucket
+          metadata:
+            name: {{ $appName }}-frontend-{{ $environment }}
+            annotations:
+              crossplane.io/external-name: {{ $appName }}-frontend-{{ $environment }}-{{ randAlphaNum 8 | lower }}
+          spec:
+            forProvider:
+              region: {{ $region }}
+              tags:
+                Name: {{ $appName }}-frontend-{{ $environment }}
+                Environment: {{ $environment }}
+                Tier: frontend
+                ManagedBy: crossplane
+            providerConfigRef:
+              name: default
+          
+          ---
+          apiVersion: s3.aws.upbound.io/v1beta1
+          kind: BucketWebsiteConfiguration
+          metadata:
+            name: {{ $appName }}-website-config-{{ $environment }}
+          spec:
+            forProvider:
+              region: {{ $region }}
+              bucket: {{ $appName }}-frontend-{{ $environment }}-{{ randAlphaNum 8 | lower }}
+              indexDocument:
+                - suffix: index.html
+              errorDocument:
+                - key: error.html
+            providerConfigRef:
+              name: default
+          
+          ---
+          apiVersion: s3.aws.upbound.io/v1beta1
+          kind: Object
+          metadata:
+            name: {{ $appName }}-index-html-{{ $environment }}
+          spec:
+            forProvider:
+              region: {{ $region }}
+              bucket: {{ $appName }}-frontend-{{ $environment }}-{{ randAlphaNum 8 | lower }}
+              key: index.html
+              contentType: text/html
+              content: |
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>{{ $appName | title }} - {{ $environment | title }}</title>
+                    <style>
+                        body { 
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                            margin: 0; padding: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+                        }
+                        .container { 
+                            text-align: center; background: rgba(255,255,255,0.1); 
+                            padding: 60px; border-radius: 20px; backdrop-filter: blur(10px);
+                            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+                        }
+                        h1 { font-size: 3em; margin-bottom: 20px; font-weight: 300; }
+                        .tier { 
+                            background: rgba(255,255,255,0.2); margin: 20px 0; padding: 20px; 
+                            border-radius: 10px; border-left: 4px solid #4CAF50;
+                        }
+                        .status { color: #4CAF50; font-weight: bold; }
+                        .info { opacity: 0.9; margin: 10px 0; }
+                        .footer { margin-top: 40px; opacity: 0.7; font-size: 0.9em; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <h1>{{ $appName | title }}</h1>
+                        <div class="info">Environment: <strong>{{ $environment | title }}</strong></div>
+                        <div class="info">Architecture: <strong>3-Tier Application</strong></div>
+                        
+                        <div class="tier">
+                            <h3>🎨 Tier 1: Frontend</h3>
+                            <div class="status">✅ S3 Static Website - Active</div>
+                        </div>
+                        
+                        <div class="tier">
+                            <h3>⚡ Tier 2: Backend API</h3>
+                            <div class="status">✅ Lambda + API Gateway - Active</div>
+                        </div>
+                        
+                        <div class="tier">
+                            <h3>🗄️ Tier 3: Database</h3>
+                            <div class="status">✅ PostgreSQL RDS - Active</div>
+                        </div>
+                        
+                        <div class="footer">
+                            <p>🚀 Powered by Crossplane + Go Templating</p>
+                            <p>Generated: {{ now | date "2006-01-02 15:04:05" }} UTC</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            providerConfigRef:
+              name: default
+          {{ end }}
+
+  # Step 2: Mark resources as ready
+  - step: auto-ready
+    functionRef:
+      name: function-auto-ready
