@@ -86,7 +86,6 @@ spec:
               gotemplating.fn.crossplane.io/composition-resource-name: {{ $appName }}-lambda-role
           spec:
             forProvider:
-              region: {{ $region }}
               assumeRolePolicy: |
                 {
                   "Version": "2012-10-17",
@@ -118,7 +117,6 @@ spec:
               gotemplating.fn.crossplane.io/composition-resource-name: {{ $appName }}-lambda-policy
           spec:
             forProvider:
-              region: {{ $region }}
               role: {{ $appName }}-lambda-role-{{ $environment }}
               policyArn: arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
             providerConfigRef:
