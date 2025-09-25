@@ -55,7 +55,7 @@ spec:
               allocatedStorage: {{ .observed.composite.resource.spec.database.allocatedStorage | default 20 }}
               dbName: {{ $appName | replace "-" "" }}{{ $environment }}
               username: {{ $appName | replace "-" "" }}admin
-              password: "TempPassword123!"
+              manageMasterUserPassword: true
               multiAz: {{ .observed.composite.resource.spec.database.multiAZ | default false }}
               backupRetentionPeriod: {{ .observed.composite.resource.spec.database.backupRetentionPeriod | default 7 }}
               storageEncrypted: true
@@ -88,7 +88,19 @@ spec:
               role: arn:aws:iam::319422413814:role/lambda-execution-role
               timeout: {{ .observed.composite.resource.spec.backend.timeout | default 30 }}
               memorySize: {{ .observed.composite.resource.spec.backend.memory | default 512 }}
-              filename: lambda.zip
+              code:
+                - zipFile: |
+                    exports.handler = async (event) => {
+                        return {
+                            statusCode: 200,
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                message: '{{ $appName }} API is working!',
+                                environment: '{{ $environment }}',
+                                timestamp: new Date().toISOString()
+                            })
+                        };
+                    };
               tags:
                 Name: {{ $appName }}-api-{{ $environment }}
                 Environment: {{ $environment }}
