@@ -74,6 +74,57 @@ spec:
           
           # Tier 2: Backend Layer (Lambda Function + API Gateway)
           {{ if .observed.composite.resource.spec.backend.enabled }}
+          
+          # Lambda Execution Role
+          ---
+          apiVersion: iam.aws.upbound.io/v1beta1
+          kind: Role
+          metadata:
+            name: {{ $appName }}-lambda-role-{{ $environment }}
+            annotations:
+              crossplane.io/external-name: {{ $appName }}-lambda-role-{{ $environment }}
+              gotemplating.fn.crossplane.io/composition-resource-name: {{ $appName }}-lambda-role
+          spec:
+            forProvider:
+              region: {{ $region }}
+              assumeRolePolicy: |
+                {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Principal": {
+                        "Service": "lambda.amazonaws.com"
+                      },
+                      "Action": "sts:AssumeRole"
+                    }
+                  ]
+                }
+              tags:
+                Name: {{ $appName }}-lambda-role-{{ $environment }}
+                Environment: {{ $environment }}
+                Tier: backend
+                ManagedBy: crossplane
+            providerConfigRef:
+              name: default
+          
+          # Lambda Execution Policy Attachment
+          ---
+          apiVersion: iam.aws.upbound.io/v1beta1
+          kind: RolePolicyAttachment
+          metadata:
+            name: {{ $appName }}-lambda-policy-{{ $environment }}
+            annotations:
+              gotemplating.fn.crossplane.io/composition-resource-name: {{ $appName }}-lambda-policy
+          spec:
+            forProvider:
+              region: {{ $region }}
+              role: {{ $appName }}-lambda-role-{{ $environment }}
+              policyArn: arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+            providerConfigRef:
+              name: default
+          
+          # Lambda Function
           ---
           apiVersion: lambda.aws.upbound.io/v1beta1
           kind: Function
@@ -85,7 +136,8 @@ spec:
           spec:
             forProvider:
               region: {{ $region }}
-              role: arn:aws:iam::319422413814:role/lambda-execution-role
+              roleRef:
+                name: {{ $appName }}-lambda-role-{{ $environment }}
               timeout: {{ .observed.composite.resource.spec.backend.timeout | default 30 }}
               memorySize: {{ .observed.composite.resource.spec.backend.memory | default 512 }}
               imageUri: public.ecr.aws/lambda/nodejs:18
