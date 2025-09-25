@@ -20,7 +20,7 @@ spec:
   source:
     repoURL: https://github.com/msdp-platform/msdp-platform-core.git
     targetRevision: dev
-    path: infrastructure/crossplane-infra
+    path: infrastructure/crossplane-infra/fresh
   
   # Destination Configuration
   destination:
@@ -39,6 +39,8 @@ spec:
       - PruneLast=true
       - RespectIgnoreDifferences=true
       - ApplyOutOfSyncOnly=true
+      - SkipDryRunOnMissingResource=true
+      - ServerSideApply=true
     retry:
       limit: 5
       backoff:
