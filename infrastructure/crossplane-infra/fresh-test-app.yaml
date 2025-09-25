@@ -1,0 +1,45 @@
+# Fresh No-Touch Test - 3-Tier E-commerce Application
+# This test validates the complete GitOps workflow with Crossplane
+apiVersion: platform.msdp.com/v1alpha1
+kind: TierApp
+metadata:
+  name: fresh-test-ecommerce
+  labels:
+    app.kubernetes.io/name: fresh-test-ecommerce
+    app.kubernetes.io/component: 3tier-application
+    app.kubernetes.io/part-of: msdp-platform
+    environment: test
+    tier: full-stack
+  annotations:
+    platform.msdp.com/description: "Fresh no-touch test of 3-tier architecture"
+    platform.msdp.com/test-type: "end-to-end"
+spec:
+  # Application Configuration
+  appName: fresh-test-ecommerce
+  environment: test
+  
+  # Infrastructure Constraints
+  constraints:
+    region: eu-west-1
+    budget: low
+  
+  # Tier 1: Frontend (S3 Static Website)
+  frontend:
+    enabled: true
+    type: static-website
+  
+  # Tier 2: Backend (Lambda + API Gateway)
+  backend:
+    enabled: true
+    type: serverless
+    runtime: nodejs18.x
+    memory: 512
+    timeout: 30
+  
+  # Tier 3: Database (PostgreSQL RDS)
+  database:
+    enabled: true
+    engine: postgres
+    version: "15.4"
+    instanceClass: db.t3.micro
+    allocatedStorage: 20
