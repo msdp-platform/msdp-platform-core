@@ -208,7 +208,8 @@ spec:
           spec:
             forProvider:
               region: {{ $region }}
-              bucket: {{ $bucketName }}
+              bucketRef:
+                name: {{ $appName }}-frontend-{{ $environment }}
               indexDocument:
                 - suffix: index.html
               errorDocument:
@@ -226,7 +227,8 @@ spec:
           spec:
             forProvider:
               region: {{ $region }}
-              bucket: {{ $bucketName }}
+              bucketRef:
+                name: {{ $appName }}-frontend-{{ $environment }}
               key: index.html
               contentType: text/html
               content: |
