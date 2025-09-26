@@ -1,0 +1,67 @@
+# ArgoCD Application for 3-Tier Architecture
+# Manages the deployment of 3-tier infrastructure via GitOps
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: msdp-3tier-architecture
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: msdp-3tier-architecture
+    app.kubernetes.io/component: argocd-application
+    app.kubernetes.io/part-of: msdp-platform
+    msdp.platform/architecture: 3tier
+  annotations:
+    argocd.argoproj.io/sync-options: "SkipDryRunOnMissingResource=true"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  
+  source:
+    repoURL: https://github.com/msdp-platform/msdp-platform-core.git
+    targetRevision: dev
+    path: infrastructure/crossplane-infra
+    
+  destination:
+    server: https://kubernetes.default.svc
+    
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=false  # crossplane-system already exists
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+      - RespectIgnoreDifferences=true  # Enable proper sync wave handling
+      - ServerSideApply=true           # Better for CRDs
+      - SkipDryRunOnMissingResource=true  # Skip dry run for missing CRDs
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+        
+  # Health checks for Crossplane resources
+  ignoreDifferences:
+    - group: apiextensions.crossplane.io
+      kind: CompositeResourceDefinition
+      jsonPointers:
+        - /status
+    - group: apiextensions.crossplane.io
+      kind: Composition
+      jsonPointers:
+        - /status
+        
+  # Resource tracking
+  info:
+    - name: 'Architecture'
+      value: '3-Tier (Frontend + Backend + Database)'
+    - name: 'Technologies'
+      value: 'S3 + Lambda + API Gateway + RDS PostgreSQL'
+    - name: 'Functions'
+      value: 'Go Templating + Auto Ready'
+    - name: 'Repository'
+      value: 'msdp-platform-core'

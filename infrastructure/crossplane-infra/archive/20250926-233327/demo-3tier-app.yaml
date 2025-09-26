@@ -1,0 +1,50 @@
+# Demo 3-Tier Application
+# Example deployment using the clean 3-tier architecture
+apiVersion: platform.msdp.com/v1alpha1
+kind: TierApp
+metadata:
+  name: demo-ecommerce-app
+  namespace: default
+  labels:
+    app.kubernetes.io/name: demo-ecommerce-app
+    app.kubernetes.io/component: 3tier-application
+    app.kubernetes.io/part-of: msdp-platform
+    msdp.platform/environment: dev
+  annotations:
+    platform.msdp.com/description: "Demo e-commerce application with 3-tier architecture"
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  # Application Configuration
+  appName: demo-ecommerce
+  environment: dev
+  
+  # Tier 1: Frontend Configuration
+  frontend:
+    enabled: true
+    type: static-website
+    domain: ""  # Will use S3 website URL
+    
+  # Tier 2: Backend Configuration
+  backend:
+    enabled: true
+    type: lambda
+    runtime: nodejs18.x
+    memory: 512
+    timeout: 30
+    
+  # Tier 3: Database Configuration
+  database:
+    enabled: true
+    engine: postgresql
+    version: "15.4"
+    instanceClass: db.t3.micro
+    allocatedStorage: 20
+    multiAZ: false
+    backupRetentionPeriod: 7
+    
+  # Infrastructure Constraints
+  constraints:
+    region: eu-west-1
+    budget: low
+    performance: basic
+    security: enhanced
