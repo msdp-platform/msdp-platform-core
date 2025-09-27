@@ -1,0 +1,66 @@
+name: Crossplane Validate
+
+on:
+  push:
+    branches: [ dev ]
+    paths:
+      - 'infrastructure/crossplane-infra/**'
+      - '.github/workflows/crossplane-validate.yml'
+  pull_request:
+    branches: [ dev ]
+    paths:
+      - 'infrastructure/crossplane-infra/**'
+      - '.github/workflows/crossplane-validate.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go (for tooling that may require it)
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Install kustomize
+        run: |
+          curl -sSL https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash -s -- 5.4.2
+          sudo mv kustomize /usr/local/bin/
+          kustomize version
+
+      - name: Install kubeconform
+        run: |
+          curl -L https://github.com/yannh/kubeconform/releases/download/v0.6.6/kubeconform-linux-amd64.tar.gz | sudo tar -xz -C /usr/local/bin kubeconform
+          kubeconform -v
+
+      - name: Validate YAML structure
+        run: |
+          echo "Scanning YAML files under infrastructure/crossplane-infra/"
+          find infrastructure/crossplane-infra -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -I{} bash -c "yq e '.' {} >/dev/null"
+        env:
+          YQ_VERS: 4
+        shell: bash
+
+      - name: Kustomize build (if kustomization present)
+        run: |
+          set -e
+          if ls infrastructure/crossplane-infra/kustomization.* >/dev/null 2>&1; then
+            echo "Found kustomization in infrastructure/crossplane-infra, running kustomize build"
+            kustomize build infrastructure/crossplane-infra > /tmp/kustomize-out.yaml
+            echo "Built manifests to /tmp/kustomize-out.yaml"
+          else
+            echo "No kustomization detected. Concatenating YAMLs for kubeconform."
+            find infrastructure/crossplane-infra -type f \( -name '*.yml' -o -name '*.yaml' \) -maxdepth 1 -print -exec cat {} \; > /tmp/kustomize-out.yaml || true
+          fi
+
+      - name: Schema validation via kubeconform (ignore missing CRDs)
+        run: |
+          kubeconform \
+            -strict \
+            -ignore-missing-schemas \
+            -schema-location default \
+            -schema-location 'https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{.NormalizedKubernetesVersion}}-standalone/{{.ResourceKind}}{{.KindSuffix}}.json' \
+            /tmp/kustomize-out.yaml
